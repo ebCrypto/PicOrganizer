@@ -17,30 +17,38 @@ using IHost host = Host.CreateDefaultBuilder(args)
         services
             .AddSingleton<ICopyPicturesService, CopyPicturesService>()
             .AddSingleton<IDirectoryNameService, DirectoryNameService>()
+            .AddSingleton<IDirectoryReporterService, DirectoryReporterService>()
+            .AddSingleton<IReportWriterService, CsvReportWriterService>()
             )
     .UseSerilog()
     .Build();
 
-ProcessFolders(host.Services); 
+DoWork(host.Services);
 
 await host.RunAsync();
 
-static async void ProcessFolders(IServiceProvider services)
+static async void DoWork(IServiceProvider services)
 {
     using var serviceScope = services.CreateScope();
     var provider = serviceScope.ServiceProvider;
     var copyPictureService = provider.GetRequiredService<ICopyPicturesService>();
     var logger = provider.GetRequiredService<ILogger<Program>>();
+    var reporter = provider.GetRequiredService<IDirectoryReporterService>();
 
     logger.LogInformation("Starting...");
     var target = new DirectoryInfo(@"C:\temp\Flickr01");
-    target.Delete(true);
-    logger.LogInformation(@"Deleted {Target}...", target.FullName);
 
-    logger.LogInformation(@"Processing C:\temp\Flickr24\Auto Upload...");
-    await copyPictureService.Copy(new DirectoryInfo(@"C:\temp\Flickr24\Auto Upload"), target);
 
-    logger.LogInformation(@"Processing C:\temp\Flickr24\No Album...");
-    await copyPictureService.Copy(new DirectoryInfo(@"C:\temp\Flickr24\No Album"), target);
+
+    //target.Delete(true);
+    //logger.LogInformation(@"Deleted {Target}...", target.FullName);
+    //logger.LogInformation(@"Processing C:\temp\Flickr24\Auto Upload...");
+    //await copyPictureService.Copy(new DirectoryInfo(@"C:\temp\Flickr24\Auto Upload"), target);
+    //logger.LogInformation(@"Processing C:\temp\Flickr24\No Album...");
+    //await copyPictureService.Copy(new DirectoryInfo(@"C:\temp\Flickr24\No Album"), target);
+
+    await reporter.Report(target);
+    
+    
     logger.LogInformation("Done...");
 }

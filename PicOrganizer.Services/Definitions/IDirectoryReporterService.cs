@@ -2,5 +2,6 @@
 {
     public interface IDirectoryReporterService
     {
+        Task Report(DirectoryInfo di);
     }
 }

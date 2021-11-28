@@ -8,5 +8,9 @@ namespace PicOrganizer.Models
 {
     public class ReportSummary
     {
+        public int CountFiles { get; set; }
+        public int  CountDateTime { get; set; }
+        public int CountLatitude { get; set; }
+        public int CountLongitude { get; set; }
     }
 }
