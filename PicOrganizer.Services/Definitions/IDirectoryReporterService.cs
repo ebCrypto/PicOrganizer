@@ -1,7 +1,9 @@
-﻿namespace PicOrganizer.Services
+﻿using PicOrganizer.Models;
+
+namespace PicOrganizer.Services
 {
     public interface IDirectoryReporterService
     {
-        Task Report(DirectoryInfo di);
+        Task<IEnumerable<ReportDetail>> LocationReport(DirectoryInfo di);
     }
 }

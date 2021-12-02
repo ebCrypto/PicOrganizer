@@ -16,7 +16,8 @@ namespace PicOrganizer.Services
 
         public async Task Copy(DirectoryInfo from, DirectoryInfo to)
         {
-            var tasks = from.GetFiles().Select(f => CopyOne(f, to)).ToList();
+            _logger.LogInformation(@"Processing {Source}", from.FullName); 
+            var tasks = from.GetFiles("*.*", SearchOption.AllDirectories).Where(p=>p.Extension.ToLower() != ".json").Select(f => CopyOne(f, to)).ToList();
             await Task.WhenAll(tasks);
         }
 
@@ -24,6 +25,7 @@ namespace PicOrganizer.Services
         {
             try
             {
+                _logger.LogTrace("Processing {File}", fileInfo.FullName);
                 ImageFile imageFile;
                 DateTime dateTimeOriginal = DateTime.MinValue;
                 string? destination;

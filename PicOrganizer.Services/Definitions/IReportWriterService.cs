@@ -4,6 +4,6 @@ namespace PicOrganizer.Services
 {
     public interface IReportWriterService
     {
-        Task Write(FileInfo fileInfo, List<ReportDetail> records);
+        Task Write<T>(FileInfo fileInfo, List<T> records);
     }
 }

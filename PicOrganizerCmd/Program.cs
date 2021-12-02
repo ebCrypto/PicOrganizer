@@ -36,18 +36,25 @@ static async void DoWork(IServiceProvider services)
     var reporter = provider.GetRequiredService<IDirectoryReporterService>();
 
     logger.LogInformation("Starting...");
-    var target = new DirectoryInfo(@"C:\temp\Flickr01");
+    //var source_1 = new DirectoryInfo(@"C:\temp\Flickr28");
+    //var source_2 = new DirectoryInfo(@"C:\temp\google-photos");
+    //var source_3 = new DirectoryInfo(@"C:\temp\RebelXti");
+    //var sub_1 = new DirectoryInfo(Path.Combine(source_1.FullName, "Auto Upload"));
+    //var sub_2 = new DirectoryInfo(Path.Combine(source_1.FullName, "No Album"));
+    var target = new DirectoryInfo(@"C:\temp\AllPics");
 
 
+    //if (target.Exists)
+    //{
+    //    target.Delete(true);
+    //    logger.LogInformation(@"Deleted {Target}...", target.FullName);
+    //}
+    //await copyPictureService.Copy(sub_1, target);
+    //await copyPictureService.Copy(sub_2, target);
+    //await copyPictureService.Copy(source_3, target);
+    //await copyPictureService.Copy(source_2, target);
 
-    //target.Delete(true);
-    //logger.LogInformation(@"Deleted {Target}...", target.FullName);
-    //logger.LogInformation(@"Processing C:\temp\Flickr24\Auto Upload...");
-    //await copyPictureService.Copy(new DirectoryInfo(@"C:\temp\Flickr24\Auto Upload"), target);
-    //logger.LogInformation(@"Processing C:\temp\Flickr24\No Album...");
-    //await copyPictureService.Copy(new DirectoryInfo(@"C:\temp\Flickr24\No Album"), target);
-
-    await reporter.Report(target);
+    await reporter.LocationReport(target);
     
     
     logger.LogInformation("Done...");
