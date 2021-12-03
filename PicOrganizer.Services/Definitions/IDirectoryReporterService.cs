@@ -4,6 +4,6 @@ namespace PicOrganizer.Services
 {
     public interface IDirectoryReporterService
     {
-        Task<IEnumerable<ReportDetail>> LocationReport(DirectoryInfo di);
+        Task<IEnumerable<ReportDetail>> Report(DirectoryInfo di);
     }
 }

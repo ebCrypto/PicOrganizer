@@ -5,25 +5,25 @@ using System.Linq;
 
 namespace PicOrganizer.Services
 {
-    public class DirectoryReporterService : IDirectoryReporterService
+    public class DirectoryLocationReporterService : IDirectoryReporterService
     {
-        private readonly ILogger<DirectoryReporterService> logger;
+        private readonly ILogger<DirectoryLocationReporterService> logger;
         private readonly IReportWriterService reportWriterService;
 
-        public DirectoryReporterService(ILogger<DirectoryReporterService> logger, IReportWriterService reportWriterService)
+        public DirectoryLocationReporterService(ILogger<DirectoryLocationReporterService> logger, IReportWriterService reportWriterService)
         {
             this.logger = logger;
             this.reportWriterService = reportWriterService;
         }
 
-        public async Task<IEnumerable<ReportDetail>> LocationReport(DirectoryInfo di)
+        public async Task<IEnumerable<ReportDetail>> Report(DirectoryInfo di)
         {
             logger.LogDebug("About to create Report in {Directory}", di.FullName);
             var topFiles = di.GetFiles("*.jpg", SearchOption.TopDirectoryOnly).Select(f => LogInfo(f)).ToList();
             await Task.WhenAll(topFiles);
             var topLevelReport = topFiles.Select(p => p.Result).ToList() ?? new List<ReportDetail>();
             await reportWriterService.Write(new FileInfo(Path.Combine(di.FullName, "reportDetail.csv")), topLevelReport.OrderBy(p=>p.DateTime).ToList());
-            var folders = di.GetDirectories().Select(d => LocationReport(d)).ToList() ;
+            var folders = di.GetDirectories().Select(d => Report(d)).ToList() ;
             var subLevelReport = (await Task.WhenAll(folders)).SelectMany(p=>p).ToList();
             var comboReport = topLevelReport.Union(subLevelReport);
             await reportWriterService.Write(new FileInfo(Path.Combine(di.FullName, "reportMissingLocations.csv")), ComputeMissingLocations(comboReport));
@@ -86,8 +86,9 @@ namespace PicOrganizer.Services
                     r.Latitude = latTag?.ToString();
                     r.Longitude = longTag?.ToString();
                 }
-                catch (NotValidImageFileException)
+                catch (NotValidImageFileException e)
                 {
+                    logger.LogWarning("{File} not a valid image {Message}", fileInfo.FullName, e.Message);
                 }
 
             }

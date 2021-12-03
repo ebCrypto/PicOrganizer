@@ -50,7 +50,7 @@ namespace PicOrganizer.Services
                 }
                 await Task.Run(() =>
                 {
-                    fileInfo.CopyTo(Path.Combine(to.FullName, destination, fileInfo.Name), true);
+                    fileInfo.CopyTo(Path.Combine(targetDirectory.FullName, fileInfo.Directory.Name + "_" + fileInfo.Name), true);
                 });
             }
             catch (Exception ex)

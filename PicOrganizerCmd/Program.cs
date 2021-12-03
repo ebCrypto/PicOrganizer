@@ -17,7 +17,8 @@ using IHost host = Host.CreateDefaultBuilder(args)
         services
             .AddSingleton<ICopyPicturesService, CopyPicturesService>()
             .AddSingleton<IDirectoryNameService, DirectoryNameService>()
-            .AddSingleton<IDirectoryReporterService, DirectoryReporterService>()
+            .AddSingleton<DirectoryLocationReporterService>()
+            .AddSingleton<DirectoryDuplicateReporterService>()
             .AddSingleton<IReportWriterService, CsvReportWriterService>()
             )
     .UseSerilog()
@@ -33,29 +34,26 @@ static async void DoWork(IServiceProvider services)
     var provider = serviceScope.ServiceProvider;
     var copyPictureService = provider.GetRequiredService<ICopyPicturesService>();
     var logger = provider.GetRequiredService<ILogger<Program>>();
-    var reporter = provider.GetRequiredService<IDirectoryReporterService>();
+    var locationReporter = provider.GetRequiredService<DirectoryLocationReporterService>();
+    var duplicateReporter = provider.GetRequiredService<DirectoryDuplicateReporterService>();
 
     logger.LogInformation("Starting...");
-    //var source_1 = new DirectoryInfo(@"C:\temp\Flickr28");
-    //var source_2 = new DirectoryInfo(@"C:\temp\google-photos");
-    //var source_3 = new DirectoryInfo(@"C:\temp\RebelXti");
-    //var sub_1 = new DirectoryInfo(Path.Combine(source_1.FullName, "Auto Upload"));
-    //var sub_2 = new DirectoryInfo(Path.Combine(source_1.FullName, "No Album"));
-    var target = new DirectoryInfo(@"C:\temp\AllPics");
-
+    var source_1 = new DirectoryInfo(@"C:\temp\Flickr28");
+    var source_2 = new DirectoryInfo(@"C:\temp\google-photos");
+    var source_3 = new DirectoryInfo(@"C:\temp\RebelXti");
+    var target = new DirectoryInfo(@"C:\temp\AllPics3");
 
     //if (target.Exists)
     //{
     //    target.Delete(true);
     //    logger.LogInformation(@"Deleted {Target}...", target.FullName);
     //}
-    //await copyPictureService.Copy(sub_1, target);
-    //await copyPictureService.Copy(sub_2, target);
     //await copyPictureService.Copy(source_3, target);
     //await copyPictureService.Copy(source_2, target);
+    //await copyPictureService.Copy(source_1, target);
 
-    await reporter.LocationReport(target);
-    
-    
+    await duplicateReporter.Report(target);
+    await locationReporter.Report(target);
+
     logger.LogInformation("Done...");
 }
