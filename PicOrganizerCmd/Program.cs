@@ -20,6 +20,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
             .AddSingleton<DirectoryLocationReporterService>()
             .AddSingleton<DirectoryDuplicateReporterService>()
             .AddSingleton<IReportWriterService, CsvReportWriterService>()
+            .AddSingleton<IFileNameCleanerService, FileNameCleanerService>()
             )
     .UseSerilog()
     .Build();
@@ -38,19 +39,19 @@ static async void DoWork(IServiceProvider services)
     var duplicateReporter = provider.GetRequiredService<DirectoryDuplicateReporterService>();
 
     logger.LogInformation("Starting...");
-    var source_1 = new DirectoryInfo(@"C:\temp\Flickr28");
+    var source_1 = new DirectoryInfo(@"C:\temp\Flickr33");
     var source_2 = new DirectoryInfo(@"C:\temp\google-photos");
     var source_3 = new DirectoryInfo(@"C:\temp\RebelXti");
-    var target = new DirectoryInfo(@"C:\temp\AllPics3");
+    var target = new DirectoryInfo(@"C:\temp\AllPics5");
 
-    //if (target.Exists)
-    //{
-    //    target.Delete(true);
-    //    logger.LogInformation(@"Deleted {Target}...", target.FullName);
-    //}
-    //await copyPictureService.Copy(source_3, target);
-    //await copyPictureService.Copy(source_2, target);
-    //await copyPictureService.Copy(source_1, target);
+    if (target.Exists)
+    {
+        target.Delete(true);
+        logger.LogInformation(@"Deleted {Target}...", target.FullName);
+    }
+    await copyPictureService.Copy(source_3, target);
+    await copyPictureService.Copy(source_2, target);
+    await copyPictureService.Copy(source_1, target);
 
     await duplicateReporter.Report(target);
     await locationReporter.Report(target);

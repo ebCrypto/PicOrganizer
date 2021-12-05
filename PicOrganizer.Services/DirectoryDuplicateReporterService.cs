@@ -39,13 +39,15 @@ namespace PicOrganizer.Services
                     var hash = ComputeMd5(fileInfo);
                     if (hashes.ContainsKey(hash))
                     {
-                        logger.LogWarning("{File1} & {File2} have the same hash {Hash}", hashes[hash], fileInfo, hash);
+                        FileInfo preExistingFile = hashes[hash];
+                        if (preExistingFile.FullName == fileInfo.FullName)
+                            continue;
+                        logger.LogWarning("{File1} & {File2} have the same hash", preExistingFile, fileInfo);
                         countDuplicates++;
                         f.Duplicates += " " + hashes[hash].Name;
                     }
                     else
                         hashes.Add(hash, fileInfo);
-
                 }
             }
             logger.LogInformation("Looped through {TotalCount} and found {DuplicateCount} duplicates", topLevelReport.Count, countDuplicates);

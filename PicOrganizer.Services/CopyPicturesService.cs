@@ -7,11 +7,13 @@ namespace PicOrganizer.Services
     {
         private readonly ILogger<CopyPicturesService> _logger;
         private readonly IDirectoryNameService _directoryNameService;
+        private readonly IFileNameCleanerService _fileNameCleanerService;
 
-        public CopyPicturesService(ILogger<CopyPicturesService> logger, IDirectoryNameService directoryNameService)
+        public CopyPicturesService(ILogger<CopyPicturesService> logger, IDirectoryNameService directoryNameService, IFileNameCleanerService fileNameCleanerService)
         {
             _logger = logger;
             _directoryNameService = directoryNameService;
+            _fileNameCleanerService = fileNameCleanerService;
         }
 
         public async Task Copy(DirectoryInfo from, DirectoryInfo to)
@@ -50,7 +52,7 @@ namespace PicOrganizer.Services
                 }
                 await Task.Run(() =>
                 {
-                    fileInfo.CopyTo(Path.Combine(targetDirectory.FullName, fileInfo.Directory.Name + "_" + fileInfo.Name), true);
+                    fileInfo.CopyTo(Path.Combine(targetDirectory.FullName, _fileNameCleanerService.MakeDirectoryName(fileInfo)), true);
                 });
             }
             catch (Exception ex)
