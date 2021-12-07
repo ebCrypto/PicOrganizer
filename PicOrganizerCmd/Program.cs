@@ -42,18 +42,18 @@ static async void DoWork(IServiceProvider services)
     var source_1 = new DirectoryInfo(@"C:\temp\Flickr33");
     var source_2 = new DirectoryInfo(@"C:\temp\google-photos");
     var source_3 = new DirectoryInfo(@"C:\temp\RebelXti");
-    var target = new DirectoryInfo(@"C:\temp\AllPics5");
+    var target = new DirectoryInfo(@"C:\temp\AllPics13");
 
-    if (target.Exists)
-    {
-        target.Delete(true);
-        logger.LogInformation(@"Deleted {Target}...", target.FullName);
-    }
-    await copyPictureService.Copy(source_3, target);
-    await copyPictureService.Copy(source_2, target);
-    await copyPictureService.Copy(source_1, target);
+    //if (target.Exists)
+    //{
+    //    target.Delete(true);
+    //    logger.LogInformation(@"Deleted {Target}...", target.FullName);
+    //}
+    //await copyPictureService.Copy(source_3, target);
+    //await copyPictureService.Copy(source_2, target);
+    //await copyPictureService.Copy(source_1, target);
 
-    await duplicateReporter.Report(target);
+    await duplicateReporter.ReportAndMoveDuplicates(target);
     await locationReporter.Report(target);
 
     logger.LogInformation("Done...");

@@ -26,10 +26,12 @@ namespace PicOrganizer.Services
         public string MakeDirectoryName(FileInfo fileInfo)
         {
             string directoryName = fileInfo.Directory.Name;
-            if (records.Any(p => p.Original == directoryName))
-                directoryName = records.FirstOrDefault(p => p.Original == directoryName).ReplaceWith;
-            return String.Format($"{directoryName}_{fileInfo.Name}");
+            var replaces = records.Where(p => directoryName.Contains(p.Original)).ToList();
+            if (replaces.Any() && !string.IsNullOrEmpty(directoryName))
+                foreach (var replace in replaces)
+                directoryName = directoryName.Replace(replace.Original, replace.ReplaceWith);
+            directoryName += "_";
+            return String.Format($"{directoryName}{fileInfo.Name}");
         }
-
     }
 }
