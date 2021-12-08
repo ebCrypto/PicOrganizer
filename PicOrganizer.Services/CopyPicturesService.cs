@@ -8,18 +8,20 @@ namespace PicOrganizer.Services
         private readonly ILogger<CopyPicturesService> _logger;
         private readonly IDirectoryNameService _directoryNameService;
         private readonly IFileNameCleanerService _fileNameCleanerService;
+        private readonly string[] extensions;
 
         public CopyPicturesService(ILogger<CopyPicturesService> logger, IDirectoryNameService directoryNameService, IFileNameCleanerService fileNameCleanerService)
         {
             _logger = logger;
             _directoryNameService = directoryNameService;
             _fileNameCleanerService = fileNameCleanerService;
+            extensions = new [] { ".jpeg", ".jpg", ".avi", ".mpg", ".mpeg", ".mp4", ".mov", ".wmv", ".mkv", ".png" };
         }
 
         public async Task Copy(DirectoryInfo from, DirectoryInfo to)
         {
             _logger.LogInformation(@"Processing {Source}", from.FullName); 
-            var tasks = from.GetFiles("*.*", SearchOption.AllDirectories).Where(p=>p.Extension.ToLower() != ".json").Select(f => CopyOne(f, to)).ToList();
+            var tasks = from.GetFiles("*.*", SearchOption.AllDirectories).Where(p=> extensions.Contains(p.Extension.ToLower() )).Select(f => CopyOne(f, to)).ToList();
             await Task.WhenAll(tasks);
         }
 
