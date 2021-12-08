@@ -25,13 +25,24 @@ namespace PicOrganizer.Services
 
         public string MakeDirectoryName(FileInfo fileInfo)
         {
-            string directoryName = fileInfo.Directory.Name;
-            var replaces = records.Where(p => directoryName.Contains(p.Original)).ToList();
-            if (replaces.Any() && !string.IsNullOrEmpty(directoryName))
-                foreach (var replace in replaces)
-                directoryName = directoryName.Replace(replace.Original, replace.ReplaceWith);
-            directoryName += "_";
-            return String.Format($"{directoryName}{fileInfo.Name}");
+            try
+            {
+                string directoryName = fileInfo.Directory.Name;
+                var replaces = records.Where(p => directoryName.Contains(p.Original)).ToList();
+                if (replaces.Any() && !string.IsNullOrEmpty(directoryName))
+                    foreach (var replace in replaces)
+                        directoryName = directoryName.Replace(replace.Original, replace.ReplaceWith);
+                directoryName += "_";
+                var fileName = fileInfo.Name;
+                if (fileName.Length > 20)
+                    fileName = fileName.Substring(0, 20) + fileInfo.Extension;
+                return String.Format($"{directoryName}{fileName}");
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Can't make name");
+                return Guid.NewGuid().GetHashCode().ToString() + ".jpg";
+            }
         }
     }
 }

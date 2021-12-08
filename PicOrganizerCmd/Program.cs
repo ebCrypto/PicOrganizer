@@ -39,19 +39,15 @@ static async void DoWork(IServiceProvider services)
     var duplicateReporter = provider.GetRequiredService<DirectoryDuplicateReporterService>();
 
     logger.LogInformation("Starting...");
-    var source_1 = new DirectoryInfo(@"C:\temp\Flickr33");
-    var source_2 = new DirectoryInfo(@"C:\temp\google-photos");
-    var source_3 = new DirectoryInfo(@"C:\temp\RebelXti");
-    var target = new DirectoryInfo(@"C:\temp\AllPics13");
+    var source_1 = new DirectoryInfo(@"\\192.168.88.178\data\From PC");
+    var target = new DirectoryInfo(@"C:\\temp\air4");
 
-    //if (target.Exists)
-    //{
-    //    target.Delete(true);
-    //    logger.LogInformation(@"Deleted {Target}...", target.FullName);
-    //}
-    //await copyPictureService.Copy(source_3, target);
-    //await copyPictureService.Copy(source_2, target);
-    //await copyPictureService.Copy(source_1, target);
+    if (target.Exists)
+    {
+        target.Delete(true);
+        logger.LogInformation(@"Deleted {Target}...", target.FullName);
+    } 
+    await copyPictureService.Copy(source_1, target);
 
     await duplicateReporter.ReportAndMoveDuplicates(target);
     await locationReporter.Report(target);
