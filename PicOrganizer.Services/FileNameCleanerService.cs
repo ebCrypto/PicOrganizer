@@ -36,7 +36,7 @@ namespace PicOrganizer.Services
                 var fileName = fileInfo.Name;
                 if (fileName.Length > 20)
                     fileName = fileName.Substring(0, 20) + fileInfo.Extension;
-                return String.Format($"{directoryName}{fileName}");
+                return String.Format($"{directoryName}{fileName}").Replace("__", "_");
             }
             catch (Exception e)
             {

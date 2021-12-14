@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using PicOrganizer.Models;
 using System.Security.Cryptography;
 using System.Linq;
+using System.Collections.Concurrent;
 
 namespace PicOrganizer.Services
 {
@@ -17,11 +18,12 @@ namespace PicOrganizer.Services
             this.reportWriterService = reportWriterService;
         }
 
-        public async Task ReportAndMoveDuplicates(DirectoryInfo di)
+        public async Task ReportAndMoveDuplicates(DirectoryInfo di, DirectoryInfo destination)
         {
             logger.LogDebug("About to create Report in {Directory}", di.FullName);
             var topFiles = di.GetFiles("*.jpg", SearchOption.TopDirectoryOnly).Select(f => LogInfo(f)).ToList();
             await Task.WhenAll(topFiles);
+
             List<ReportDetail>? topLevelReport = topFiles.Select(p => p.Result).ToList();
             if (topLevelReport == null)
                 return;
@@ -44,7 +46,7 @@ namespace PicOrganizer.Services
                             continue;
                         logger.LogWarning("{File1} & {File2} have the same hash", preExistingFile, fileInfo);
                         countDuplicates++;
-                        FileInfo keepingFileInfo = MoveDuplicate(preExistingFile, fileInfo);
+                        FileInfo keepingFileInfo = MoveDuplicate(preExistingFile, fileInfo, destination);
                         hashes[hash] = keepingFileInfo;
                         f.Duplicates += " " + hashes[hash].Name;
                     }
@@ -55,24 +57,25 @@ namespace PicOrganizer.Services
             logger.LogInformation("Looped through {TotalCount} and found {DuplicateCount} duplicates", topLevelReport.Count, countDuplicates);
             await reportWriterService.Write(new FileInfo(Path.Combine(di.FullName, "reportDuplicates.csv")), topLevelReport.OrderBy(p => p.DateTime).ToList());
 
-            var folders = di.GetDirectories().Select(d => ReportAndMoveDuplicates(d)).ToList();
-            await Task.WhenAll(folders);
-        }
+            //var folders = di.GetDirectories().Select(d => ReportAndMoveDuplicates(d, destination)).ToList();
+            //await Task.WhenAll(folders);
 
-        private FileInfo MoveDuplicate(FileInfo preExistingFile, FileInfo fileInfo)
+            await di.GetDirectories().ToList().ParallelForEachAsync<DirectoryInfo, DirectoryInfo>(ReportAndMoveDuplicates, destination);
+        }
+                                                          
+        private FileInfo MoveDuplicate(FileInfo preExistingFile, FileInfo fileInfo, DirectoryInfo destination)
         {
-            var duplicates = new DirectoryInfo("C:\\temp\\Duplicates");
-            if (!duplicates.Exists)
-                duplicates.Create();
+            if (!destination.Exists)
+                destination.Create();
             var digitPre = preExistingFile.Name.Count(p => Char.IsDigit(p));
             var digitfileInfo = preExistingFile.Name.Count(p => Char.IsDigit(p));
 
             if (digitPre < digitfileInfo)
             {
-                fileInfo.MoveTo(Path.Combine(duplicates.FullName , fileInfo.Name));
+                fileInfo.MoveTo(Path.Combine(destination.FullName , fileInfo.Name));
                 return preExistingFile;
             }
-            preExistingFile.MoveTo(Path.Combine(duplicates.FullName, preExistingFile.Name));
+            preExistingFile.MoveTo(Path.Combine(destination.FullName, preExistingFile.Name));
             return fileInfo;
         }
 

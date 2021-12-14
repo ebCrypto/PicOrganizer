@@ -20,7 +20,7 @@ namespace PicOrganizer.Services
             {
                 using var writer = new StreamWriter(fileInfo.FullName, false);
                 using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
-                logger.LogDebug("Writing {Count} to {FileName}", records.Count, fileInfo.FullName);
+                logger.LogDebug("Writing {Count} row(s) to {FileName}", records.Count, fileInfo.FullName);
                 await csv.WriteRecordsAsync(records);
             }
             else

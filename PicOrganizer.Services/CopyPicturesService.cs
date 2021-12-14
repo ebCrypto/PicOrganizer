@@ -21,8 +21,10 @@ namespace PicOrganizer.Services
         public async Task Copy(DirectoryInfo from, DirectoryInfo to)
         {
             _logger.LogInformation(@"Processing {Source}", from.FullName); 
-            var tasks = from.GetFiles("*.*", SearchOption.AllDirectories).Where(p=> extensions.Contains(p.Extension.ToLower() )).Select(f => CopyOne(f, to)).ToList();
-            await Task.WhenAll(tasks);
+            //var tasks = from.GetFiles("*.*", SearchOption.AllDirectories).Where(p=> extensions.Contains(p.Extension.ToLower() )).Select(f => CopyOne(f, to)).ToList();
+            //await Task.WhenAll(tasks);
+
+            await from.GetFiles("*.*", SearchOption.AllDirectories).Where(p => extensions.Contains(p.Extension.ToLower())).ParallelForEachAsync<FileInfo, DirectoryInfo>(CopyOne, to);
         }
 
         private async Task CopyOne(FileInfo fileInfo, DirectoryInfo to)

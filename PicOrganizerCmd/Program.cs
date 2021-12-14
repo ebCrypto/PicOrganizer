@@ -21,6 +21,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
             .AddSingleton<DirectoryDuplicateReporterService>()
             .AddSingleton<IReportWriterService, CsvReportWriterService>()
             .AddSingleton<IFileNameCleanerService, FileNameCleanerService>()
+            .AddSingleton<ITimelineToFilesService, TimelineToFilesService>()
             )
     .UseSerilog()
     .Build();
@@ -37,20 +38,34 @@ static async void DoWork(IServiceProvider services)
     var logger = provider.GetRequiredService<ILogger<Program>>();
     var locationReporter = provider.GetRequiredService<DirectoryLocationReporterService>();
     var duplicateReporter = provider.GetRequiredService<DirectoryDuplicateReporterService>();
+    var timelineService = provider.GetRequiredService<ITimelineToFilesService>();
 
     logger.LogInformation("Starting...");
-    var source_1 = new DirectoryInfo(@"\\192.168.88.178\data\From PC");
-    var target = new DirectoryInfo(@"C:\\temp\air4");
+
+    var target = new DirectoryInfo(@"C:\\temp\AllPics15");
+    
+
+    var source_1 = new DirectoryInfo(@"C:\temp\Flickr33");
+    var source_2 = new DirectoryInfo(@"C:\temp\google-photos");
+    var source_3 = new DirectoryInfo(@"C:\temp\RebelXti");
+    var source_4 = new DirectoryInfo(@"C:\temp\samsung-lg");
 
     if (target.Exists)
     {
         target.Delete(true);
         logger.LogInformation(@"Deleted {Target}...", target.FullName);
-    } 
+    }
+    await copyPictureService.Copy(source_4, target);
+    await copyPictureService.Copy(source_3, target);
+    await copyPictureService.Copy(source_2, target);
     await copyPictureService.Copy(source_1, target);
 
-    await duplicateReporter.ReportAndMoveDuplicates(target);
+    await duplicateReporter.ReportAndMoveDuplicates(target, new DirectoryInfo(target.FullName + "-duplicates"));
     await locationReporter.Report(target);
+
+    timelineService.LoadTimeLine(new FileInfo(@"C:\temp\eb-timeline.csv"));
+   //await timelineService.AddlocationFromTimeLine(new DirectoryInfo(@"C:\temp\AllPics13\2003-12")); ;
+
 
     logger.LogInformation("Done...");
 }
