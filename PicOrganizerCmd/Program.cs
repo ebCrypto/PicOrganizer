@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using PicOrganizer.Services;
+using PicOrganizer.Models;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
@@ -19,6 +20,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
             .AddSingleton<IDirectoryNameService, DirectoryNameService>()
             .AddSingleton<DirectoryLocationReporterService>()
             .AddSingleton<DirectoryDuplicateReporterService>()
+            .AddSingleton<AppSettings>()
             .AddSingleton<IReportWriterService, CsvReportWriterService>()
             .AddSingleton<IFileNameCleanerService, FileNameCleanerService>()
             .AddSingleton<ITimelineToFilesService, TimelineToFilesService>()
@@ -39,11 +41,11 @@ static async void DoWork(IServiceProvider services)
     var locationReporter = provider.GetRequiredService<DirectoryLocationReporterService>();
     var duplicateReporter = provider.GetRequiredService<DirectoryDuplicateReporterService>();
     var timelineService = provider.GetRequiredService<ITimelineToFilesService>();
+    var appSettings = provider.GetRequiredService<AppSettings>();
 
     logger.LogInformation("Starting...");
 
-    var target = new DirectoryInfo(@"C:\\temp\AllPics15");
-    
+    var target = new DirectoryInfo(@"C:\\temp\AllPics33");    
 
     var source_1 = new DirectoryInfo(@"C:\temp\Flickr33");
     var source_2 = new DirectoryInfo(@"C:\temp\google-photos");
@@ -60,7 +62,7 @@ static async void DoWork(IServiceProvider services)
     await copyPictureService.Copy(source_2, target);
     await copyPictureService.Copy(source_1, target);
 
-    await duplicateReporter.ReportAndMoveDuplicates(target, new DirectoryInfo(target.FullName + "-duplicates"));
+    await duplicateReporter.ReportAndMoveDuplicates(target, new DirectoryInfo(target.FullName + "-" + appSettings.DuplicatesFolderName));
     await locationReporter.Report(target);
 
     timelineService.LoadTimeLine(new FileInfo(@"C:\temp\eb-timeline.csv"));

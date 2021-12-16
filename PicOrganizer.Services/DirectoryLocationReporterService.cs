@@ -7,11 +7,13 @@ namespace PicOrganizer.Services
 {
     public class DirectoryLocationReporterService : IDirectoryReporterService
     {
+        private readonly AppSettings appSettings;
         private readonly ILogger<DirectoryLocationReporterService> logger;
         private readonly IReportWriterService reportWriterService;
 
-        public DirectoryLocationReporterService(ILogger<DirectoryLocationReporterService> logger, IReportWriterService reportWriterService)
+        public DirectoryLocationReporterService(AppSettings appSettings, ILogger<DirectoryLocationReporterService> logger, IReportWriterService reportWriterService)
         {
+            this.appSettings = appSettings;
             this.logger = logger;
             this.reportWriterService = reportWriterService;
         }
@@ -19,7 +21,7 @@ namespace PicOrganizer.Services
         public async Task<IEnumerable<ReportDetail>> Report(DirectoryInfo di)
         {
             logger.LogDebug("About to create Report in {Directory}", di.FullName);
-            var topFiles = di.GetFiles("*.jpg", SearchOption.TopDirectoryOnly).Select(f => LogInfo(f)).ToList();
+            var topFiles = di.GetFilesViaPattern(appSettings.PictureExtensions, SearchOption.TopDirectoryOnly).Select(f => LogInfo(f)).ToList();
             await Task.WhenAll(topFiles);
             var topLevelReport = topFiles.Select(p => p.Result).ToList() ?? new List<ReportDetail>();
             await reportWriterService.Write(new FileInfo(Path.Combine(di.FullName, "reportDetail.csv")), topLevelReport.OrderBy(p=>p.DateTime).ToList());

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Globalization;
 using CoordinateSharp;
 using CsvHelper;
 using ExifLibrary;
@@ -14,12 +9,14 @@ namespace PicOrganizer.Services
 {
     public class TimelineToFilesService : ITimelineToFilesService
     {
+        private readonly AppSettings appSettings;
         private readonly ILogger<TimelineToFilesService> logger;
 
         public List<ReportMissingLocation> Timeline { get; private set; }
 
-        public TimelineToFilesService(ILogger<TimelineToFilesService> logger)
+        public TimelineToFilesService(AppSettings appSettings, ILogger<TimelineToFilesService> logger)
         {
+            this.appSettings = appSettings;
             this.logger = logger;
         }
 
@@ -111,7 +108,7 @@ namespace PicOrganizer.Services
 
         public async Task AddlocationFromTimeLine(DirectoryInfo di)
         {
-            var topFiles = di.GetFiles("*.jpg", SearchOption.TopDirectoryOnly); //https://stackoverflow.com/questions/38634376/running-async-methods-in-parallel 
+            var topFiles = di.GetFilesViaPattern(appSettings.PictureExtensions, SearchOption.TopDirectoryOnly); //https://stackoverflow.com/questions/38634376/running-async-methods-in-parallel 
             //var tasks = topFiles.Select(async f => await AddlocationFromTimeLine(f));
             //await Task.WhenAll(tasks);
 

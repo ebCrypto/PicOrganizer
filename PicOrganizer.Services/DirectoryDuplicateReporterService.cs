@@ -9,11 +9,13 @@ namespace PicOrganizer.Services
 {
     public class DirectoryDuplicateReporterService : IDirectoryDuplicateReporterService
     {
+        private readonly AppSettings appSettings;
         private readonly ILogger<DirectoryDuplicateReporterService> logger;
         private readonly IReportWriterService reportWriterService;
 
-        public DirectoryDuplicateReporterService(ILogger<DirectoryDuplicateReporterService> logger, IReportWriterService reportWriterService)
+        public DirectoryDuplicateReporterService(AppSettings appSettings, ILogger<DirectoryDuplicateReporterService> logger, IReportWriterService reportWriterService)
         {
+            this.appSettings = appSettings;
             this.logger = logger;
             this.reportWriterService = reportWriterService;
         }
@@ -21,7 +23,7 @@ namespace PicOrganizer.Services
         public async Task ReportAndMoveDuplicates(DirectoryInfo di, DirectoryInfo destination)
         {
             logger.LogDebug("About to create Report in {Directory}", di.FullName);
-            var topFiles = di.GetFiles("*.jpg", SearchOption.TopDirectoryOnly).Select(f => LogInfo(f)).ToList();
+            var topFiles = di.GetFilesViaPattern(appSettings.AllFileExtensions , SearchOption.TopDirectoryOnly).Select(f => LogInfo(f)).ToList();
             await Task.WhenAll(topFiles);
 
             List<ReportDetail>? topLevelReport = topFiles.Select(p => p.Result).ToList();

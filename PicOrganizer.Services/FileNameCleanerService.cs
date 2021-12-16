@@ -1,22 +1,19 @@
 ﻿using CsvHelper;
 using Microsoft.Extensions.Logging;
 using PicOrganizer.Models;
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PicOrganizer.Services
 {
     public class FileNameCleanerService : IFileNameCleanerService
     {
+        private readonly AppSettings appSettings;
         private readonly ILogger<FileNameCleanerService> logger;
-        List<DirectoryReplace> records;
+        readonly List<DirectoryReplace> records;
 
-        public FileNameCleanerService(ILogger<FileNameCleanerService> logger)
+        public FileNameCleanerService(AppSettings appSettings, ILogger<FileNameCleanerService> logger)
         {
+            this.appSettings = appSettings;
             this.logger = logger;
             using var reader = new StreamReader("Data\\CleanDirectoryName.csv");
             using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
@@ -36,12 +33,15 @@ namespace PicOrganizer.Services
                 var fileName = fileInfo.Name;
                 if (fileName.Length > 20)
                     fileName = fileName.Substring(0, 20) + fileInfo.Extension;
-                return String.Format($"{directoryName}{fileName}").Replace("__", "_");
+                string result = string.Format($"{directoryName}{fileName}").Replace("__", "_");
+                if (result.StartsWith("_"))
+                    result = result.Substring(1);
+                return result;
             }
             catch (Exception e)
             {
                 logger.LogError(e, "Can't make name");
-                return Guid.NewGuid().GetHashCode().ToString() + ".jpg";
+                return Guid.NewGuid().GetHashCode().ToString() + appSettings.JpegExtension;
             }
         }
     }
