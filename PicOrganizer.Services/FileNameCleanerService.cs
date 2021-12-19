@@ -31,10 +31,10 @@ namespace PicOrganizer.Services
                         directoryName = directoryName.Replace(replace.Original, replace.ReplaceWith);
                 directoryName += "_";
                 var fileName = fileInfo.Name;
-                if (fileName.Length > 20)
+                if (Guid.TryParse(fileName[^(fileInfo.Extension.Length)].ToString(), out var resultGuid))
                 {
-                    fileName = fileName.Substring(0, 20) + fileInfo.Extension;
-                    logger.LogDebug("Using First 20 char of {File}", fileName);
+                    logger.LogDebug("Found Guid {File}", fileName);
+                    fileName = Math.Abs(fileName.GetHashCode()) + fileInfo.Extension;
                 }
                 string result = string.Format($"{directoryName}{fileName}").Replace("__", "_");
                 if (result.StartsWith("_"))

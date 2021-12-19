@@ -10,6 +10,7 @@ namespace PicOrganizer.Models
     {
         public AppSettings()
         {
+            UnkownFolderName = "unknown";
             DuplicatesFolderName = "duplicates";
             VideosFolderName = "Videos";
             InvalidJpegFolderName = "InvalidJpeg";
@@ -29,5 +30,6 @@ namespace PicOrganizer.Models
         public string JpegExtension { get; set; }
         public string? InvalidJpegFolderName { get; set; }
         public int StartingYearOfLibrary { get; set; }
+        public string? UnkownFolderName { get; set; }
     }
 }

@@ -16,7 +16,7 @@ Log.Logger = new LoggerConfiguration()
 using IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((_, services) =>
         services
-            .AddSingleton<ICopyPicturesService, CopyPicturesService>()
+            .AddSingleton<ICopyDigitalMediaService, CopyDigitalMediaService>()
             .AddSingleton<IDirectoryNameService, DirectoryNameService>()
             .AddSingleton<LocationService>()
             .AddSingleton<DirectoryDuplicateReporterService>()
@@ -36,7 +36,7 @@ static async void DoWork(IServiceProvider services)
 {
     using var serviceScope = services.CreateScope();
     var provider = serviceScope.ServiceProvider;
-    var copyPictureService = provider.GetRequiredService<ICopyPicturesService>();
+    var copyPictureService = provider.GetRequiredService<ICopyDigitalMediaService>();
     var logger = provider.GetRequiredService<ILogger<Program>>();
     var locationReporter = provider.GetRequiredService<LocationService>();
     var duplicateReporter = provider.GetRequiredService<DirectoryDuplicateReporterService>();
@@ -45,7 +45,7 @@ static async void DoWork(IServiceProvider services)
 
     logger.LogInformation("Starting...");
 
-    var target = new DirectoryInfo(@"C:\\temp\AllPics44");    
+    var target = new DirectoryInfo(@"C:\\temp\AllPics49");    
 
     var source_1 = new DirectoryInfo(@"C:\temp\Flickr33");
     var source_2 = new DirectoryInfo(@"C:\temp\google-photos");

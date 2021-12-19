@@ -7,15 +7,15 @@ using PicOrganizer.Models;
 
 namespace PicOrganizer.Services
 {
-    public class CopyPicturesService : ICopyPicturesService
+    public class CopyDigitalMediaService : ICopyDigitalMediaService
     {
         private readonly AppSettings appSettings;
-        private readonly ILogger<CopyPicturesService> _logger;
+        private readonly ILogger<CopyDigitalMediaService> _logger;
         private readonly IDirectoryNameService _directoryNameService;
         private readonly IFileNameCleanerService _fileNameCleanerService;
         private readonly string[] extensions;
 
-        public CopyPicturesService(Models.AppSettings appSettings, ILogger<CopyPicturesService> logger, IDirectoryNameService directoryNameService, IFileNameCleanerService fileNameCleanerService)
+        public CopyDigitalMediaService(AppSettings appSettings, ILogger<CopyDigitalMediaService> logger, IDirectoryNameService directoryNameService, IFileNameCleanerService fileNameCleanerService)
         {
             this.appSettings = appSettings;
             _logger = logger;
@@ -39,7 +39,7 @@ namespace PicOrganizer.Services
                 _logger.LogTrace("Processing {File}", fileInfo.FullName);
                 ImageFile imageFile;
                 DateTime dateTimeOriginal = DateTime.MinValue;
-                string? destination;
+                string? destination = appSettings.UnkownFolderName;
                 DateTime dateInferred = DateTime.MinValue;
                 try
                 {
@@ -52,7 +52,7 @@ namespace PicOrganizer.Services
                         dateInferred = await InferDateFromName(fileInfo.Name);
                     if (dateTimeOriginal == DateTime.MinValue && dateInferred == DateTime.MinValue)
                         dateInferred = await InferDateFromName(fileInfo.Directory.Name);
-                    if (dateTimeOriginal == DateTime.MinValue && dateInferred == DateTime.MinValue)
+                    if (dateInferred == DateTime.MinValue)
                         destination = _directoryNameService.GetName(dateTimeOriginal);
                     else
                         destination = _directoryNameService.GetName(dateInferred);

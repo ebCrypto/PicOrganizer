@@ -1,6 +1,6 @@
 ﻿namespace PicOrganizer.Services
 {
-    public interface ICopyPicturesService
+    public interface ICopyDigitalMediaService
     {
         Task Copy(DirectoryInfo from, DirectoryInfo to);
     }
