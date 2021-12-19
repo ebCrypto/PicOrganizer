@@ -5,13 +5,13 @@ using System.Linq;
 
 namespace PicOrganizer.Services
 {
-    public class DirectoryLocationReporterService : IDirectoryReporterService
+    public class LocationService : ILocationService
     {
         private readonly AppSettings appSettings;
-        private readonly ILogger<DirectoryLocationReporterService> logger;
+        private readonly ILogger<LocationService> logger;
         private readonly IReportWriterService reportWriterService;
 
-        public DirectoryLocationReporterService(AppSettings appSettings, ILogger<DirectoryLocationReporterService> logger, IReportWriterService reportWriterService)
+        public LocationService(AppSettings appSettings, ILogger<LocationService> logger, IReportWriterService reportWriterService)
         {
             this.appSettings = appSettings;
             this.logger = logger;
@@ -61,6 +61,10 @@ namespace PicOrganizer.Services
                     r.DateTime = dt;
                     r.Latitude = latTag?.ToString();
                     r.Longitude = longTag?.ToString();
+                }
+                catch (NotValidJPEGFileException e)
+                {
+                    logger.LogWarning("{File} not a valid JPEG {Message}", fileInfo.FullName, e.Message);
                 }
                 catch (NotValidImageFileException e)
                 {

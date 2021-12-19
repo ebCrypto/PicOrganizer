@@ -80,8 +80,8 @@ namespace PicOrganizer.Services
 
         public async Task AddlocationFromTimeLine(FileInfo fi)
         {
-            var ef = await ImageFile.FromFileAsync(fi.FullName);
-            var da = ef.Properties.Get(ExifTag.DateTimeOriginal);
+            var imageFile = await ImageFile.FromFileAsync(fi.FullName);
+            var da = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
             _ = DateTime.TryParse(da?.ToString(), out var dt);
 
             ReportMissingLocation? result = Timeline.Where(p => p.Start <= dt && p.End >= dt).SingleOrDefault();
@@ -95,9 +95,9 @@ namespace PicOrganizer.Services
                 var latitude = result.Latitude;
                 var longitude = result.Longitude;
                 var c = new Coordinate(Convert.ToDouble(latitude), Convert.ToDouble(longitude), DateTime.Today);
-                MakeLatitude(c, ef);
-                MakeLongitude(c, ef);
-                await ef.SaveAsync(fi.FullName);
+                MakeLatitude(c, imageFile);
+                MakeLongitude(c, imageFile);
+                await imageFile.SaveAsync(fi.FullName);
                 logger.LogDebug("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.Name);
             }
             catch (Exception ex)
@@ -108,10 +108,7 @@ namespace PicOrganizer.Services
 
         public async Task AddlocationFromTimeLine(DirectoryInfo di)
         {
-            var topFiles = di.GetFilesViaPattern(appSettings.PictureExtensions, SearchOption.TopDirectoryOnly); //https://stackoverflow.com/questions/38634376/running-async-methods-in-parallel 
-            //var tasks = topFiles.Select(async f => await AddlocationFromTimeLine(f));
-            //await Task.WhenAll(tasks);
-
+            var topFiles = di.GetFilesViaPattern(appSettings.PictureExtensions, SearchOption.TopDirectoryOnly);
             await topFiles.ParallelForEachAsync<FileInfo>(AddlocationFromTimeLine);
         }
     }

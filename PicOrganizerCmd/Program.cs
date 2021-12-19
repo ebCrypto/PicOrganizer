@@ -18,7 +18,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
         services
             .AddSingleton<ICopyPicturesService, CopyPicturesService>()
             .AddSingleton<IDirectoryNameService, DirectoryNameService>()
-            .AddSingleton<DirectoryLocationReporterService>()
+            .AddSingleton<LocationService>()
             .AddSingleton<DirectoryDuplicateReporterService>()
             .AddSingleton<AppSettings>()
             .AddSingleton<IReportWriterService, CsvReportWriterService>()
@@ -38,14 +38,14 @@ static async void DoWork(IServiceProvider services)
     var provider = serviceScope.ServiceProvider;
     var copyPictureService = provider.GetRequiredService<ICopyPicturesService>();
     var logger = provider.GetRequiredService<ILogger<Program>>();
-    var locationReporter = provider.GetRequiredService<DirectoryLocationReporterService>();
+    var locationReporter = provider.GetRequiredService<LocationService>();
     var duplicateReporter = provider.GetRequiredService<DirectoryDuplicateReporterService>();
     var timelineService = provider.GetRequiredService<ITimelineToFilesService>();
     var appSettings = provider.GetRequiredService<AppSettings>();
 
     logger.LogInformation("Starting...");
 
-    var target = new DirectoryInfo(@"C:\\temp\AllPics33");    
+    var target = new DirectoryInfo(@"C:\\temp\AllPics44");    
 
     var source_1 = new DirectoryInfo(@"C:\temp\Flickr33");
     var source_2 = new DirectoryInfo(@"C:\temp\google-photos");

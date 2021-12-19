@@ -17,6 +17,7 @@ namespace PicOrganizer.Models
             AllFileExtensions = "*.*";
             PictureExtensions = "*.jpeg|*.jpg|*.png|*.bmp|*.tiff";
             JpegExtension = "*.jpeg";
+            StartingYearOfLibrary = 2004;
         }
 
         public string VideosFolderName { get; set; }
@@ -27,5 +28,6 @@ namespace PicOrganizer.Models
         public string PictureExtensions { get; set; }
         public string JpegExtension { get; set; }
         public string? InvalidJpegFolderName { get; set; }
+        public int StartingYearOfLibrary { get; set; }
     }
 }
