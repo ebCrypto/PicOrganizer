@@ -13,7 +13,7 @@ namespace PicOrganizer.Services
         public static List<FileInfo> GetFilesViaPattern(this DirectoryInfo source, string searchPatterns, SearchOption searchOption)
         {
             if (string.IsNullOrEmpty(searchPatterns))
-                return null;
+                return new List<FileInfo>();
             if (searchPatterns.Contains("|"))
             {
                 string[] searchPattern = searchPatterns.Split('|');

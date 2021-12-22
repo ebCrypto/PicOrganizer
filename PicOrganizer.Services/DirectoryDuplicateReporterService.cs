@@ -23,7 +23,7 @@ namespace PicOrganizer.Services
         public async Task ReportAndMoveDuplicates(DirectoryInfo di, DirectoryInfo destination)
         {
             logger.LogDebug("About to create Report in {Directory}", di.FullName);
-            var topFiles = di.GetFilesViaPattern(appSettings.AllFileExtensions , SearchOption.TopDirectoryOnly).Select(f => LogInfo(f)).ToList();
+            var topFiles = di.GetFilesViaPattern(appSettings.AllFileExtensions , SearchOption.TopDirectoryOnly).Select(f => LoadDateTaken(f)).ToList();
             await Task.WhenAll(topFiles);
 
             List<ReportDetail>? topLevelReport = topFiles.Select(p => p.Result).ToList();
@@ -46,7 +46,7 @@ namespace PicOrganizer.Services
                         FileInfo preExistingFile = hashes[hash];
                         if (preExistingFile.FullName == fileInfo.FullName)
                             continue;
-                        logger.LogWarning("{File1} & {File2} have the same hash", preExistingFile, fileInfo);
+                        logger.LogInformation("Duplicates Found. {File1} & {File2} have the same hash", preExistingFile, fileInfo);
                         countDuplicates++;
                         FileInfo keepingFileInfo = MoveDuplicate(preExistingFile, fileInfo, destination);
                         hashes[hash] = keepingFileInfo;
@@ -57,11 +57,7 @@ namespace PicOrganizer.Services
                 }
             }
             logger.LogInformation("Looped through {TotalCount} and found {DuplicateCount} duplicates", topLevelReport.Count, countDuplicates);
-            await reportWriterService.Write(new FileInfo(Path.Combine(di.FullName, "reportDuplicates.csv")), topLevelReport.OrderBy(p => p.DateTime).ToList());
-
-            //var folders = di.GetDirectories().Select(d => ReportAndMoveDuplicates(d, destination)).ToList();
-            //await Task.WhenAll(folders);
-
+            await reportWriterService.Write(new FileInfo(Path.Combine(di.FullName, appSettings.ReportDuplicatesName)), topLevelReport.OrderBy(p => p.DateTime).ToList());
             await di.GetDirectories().ToList().ParallelForEachAsync<DirectoryInfo, DirectoryInfo>(ReportAndMoveDuplicates, destination);
         }
                                                           
@@ -84,10 +80,10 @@ namespace PicOrganizer.Services
         private static string ComputeMd5 (FileInfo fi)
         {
             var myFileData = File.ReadAllBytes(fi.FullName);
-            return String.Join(" ", MD5.Create().ComputeHash(myFileData));
+            return string.Join(" ", MD5.Create().ComputeHash(myFileData));
         }
 
-        private async Task<ReportDetail> LogInfo(FileInfo fileInfo)
+        private async Task<ReportDetail> LoadDateTaken(FileInfo fileInfo)
         {
             var r = new ReportDetail()
             {
@@ -104,6 +100,10 @@ namespace PicOrganizer.Services
                     da = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
                     _ = DateTime.TryParse(da?.ToString(), out dt);
                     r.DateTime = dt;
+                }
+                catch (NotValidJPEGFileException e)
+                {
+                    logger.LogWarning("{File} not a valid JPEG {Message}", fileInfo.FullName, e.Message);
                 }
                 catch (NotValidImageFileException e)
                 {

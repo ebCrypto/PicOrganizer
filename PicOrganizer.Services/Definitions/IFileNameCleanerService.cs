@@ -2,6 +2,7 @@
 {
     public interface IFileNameCleanerService
     {
-        public string CleanNameUsingParentDir(FileInfo fileInfo);
+        public string AddParentDirectoryToFileName(FileInfo fileInfo);
+        public string CleanName(string input);
     }
 }

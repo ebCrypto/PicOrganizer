@@ -13,33 +13,64 @@ namespace PicOrganizer.Services
         private readonly ILogger<CopyDigitalMediaService> _logger;
         private readonly IDirectoryNameService _directoryNameService;
         private readonly IFileNameCleanerService _fileNameCleanerService;
-        private readonly string[] extensions;
+        private readonly IDateRecognizerService dateRecognizerService;
 
-        public CopyDigitalMediaService(AppSettings appSettings, ILogger<CopyDigitalMediaService> logger, IDirectoryNameService directoryNameService, IFileNameCleanerService fileNameCleanerService)
+        public CopyDigitalMediaService(AppSettings appSettings, ILogger<CopyDigitalMediaService> logger, IDirectoryNameService directoryNameService, IFileNameCleanerService fileNameCleanerService, IDateRecognizerService dateRecognizerService)
         {
             this.appSettings = appSettings;
             _logger = logger;
             _directoryNameService = directoryNameService;
             _fileNameCleanerService = fileNameCleanerService;
-            extensions = appSettings.VideoAndPhotoExtensions;
+            this.dateRecognizerService = dateRecognizerService;
         }
 
         public async Task Copy(DirectoryInfo from, DirectoryInfo to)
         {
             _logger.LogInformation(@"Processing {Source}", from.FullName);
             await from.GetFiles(appSettings.AllFileExtensions, SearchOption.AllDirectories)
-                .Where(p => extensions.Contains(p.Extension.ToLower()))
-                .ParallelForEachAsync<FileInfo, DirectoryInfo>(CopyOne, to);
+                .Where(p => appSettings.VideoExtensions.Contains(p.Extension.ToLower()))
+                .ParallelForEachAsync<FileInfo, DirectoryInfo>(CopyOneVideo, to);
+            await from.GetFiles(appSettings.AllFileExtensions, SearchOption.AllDirectories)
+                .Where(p => appSettings.PictureExtensions.Contains(p.Extension.ToLower()))
+                .ParallelForEachAsync<FileInfo, DirectoryInfo>(CopyOnePicture, to);
         }
 
-        private async Task CopyOne(FileInfo fileInfo, DirectoryInfo to)
+        private async Task CopyOneVideo(FileInfo fileInfo, DirectoryInfo to)
+        {
+            try
+            {
+                _logger.LogTrace("Processing {File}", fileInfo.FullName);
+                
+                var destination = appSettings.VideosFolderName;
+                DateTime dateInferred = await dateRecognizerService.InferDateFromName(fileInfo.Name);
+                if (dateInferred == DateTime.MinValue)
+                    dateInferred = await dateRecognizerService.InferDateFromName(fileInfo.Directory?.Name);
+                if (dateInferred != DateTime.MinValue)
+                    destination = Path.Combine(destination,_directoryNameService.GetName(dateInferred));
+
+                var targetDirectory = new DirectoryInfo(Path.Combine(to.FullName, destination));
+                if (!targetDirectory.Exists)
+                {
+                    targetDirectory.Create();
+                    _logger.LogDebug("Created {Directory}", targetDirectory.FullName);
+                }
+                string cleanName = _fileNameCleanerService.AddParentDirectoryToFileName(fileInfo);
+                fileInfo.CopyTo(Path.Combine(targetDirectory.FullName, cleanName), true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "{ExceptionMessage} {FileName}", ex.Message, fileInfo.Name);
+            }
+        }
+
+        private async Task CopyOnePicture(FileInfo fileInfo, DirectoryInfo to)
         {
             try
             {
                 _logger.LogTrace("Processing {File}", fileInfo.FullName);
                 ImageFile imageFile;
                 DateTime dateTimeOriginal = DateTime.MinValue;
-                string? destination = appSettings.UnkownFolderName;
+                string destination = appSettings.UnkownFolderName;
                 DateTime dateInferred = DateTime.MinValue;
                 try
                 {
@@ -47,11 +78,11 @@ namespace PicOrganizer.Services
                     ExifProperty? tag;
                     tag = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
                     _ = DateTime.TryParse(tag?.ToString(), out dateTimeOriginal);
-
+                    //TODO use cleanName
                     if (dateTimeOriginal == DateTime.MinValue)
-                        dateInferred = await InferDateFromName(fileInfo.Name);
+                        dateInferred = await dateRecognizerService.InferDateFromName(fileInfo.Name);
                     if (dateTimeOriginal == DateTime.MinValue && dateInferred == DateTime.MinValue)
-                        dateInferred = await InferDateFromName(fileInfo.Directory.Name);
+                        dateInferred = await dateRecognizerService.InferDateFromName(fileInfo.Directory?.Name);
                     if (dateInferred == DateTime.MinValue)
                         destination = _directoryNameService.GetName(dateTimeOriginal);
                     else
@@ -72,7 +103,7 @@ namespace PicOrganizer.Services
                 {
                     targetDirectory.Create();
                     _logger.LogDebug("Created {Directory}", targetDirectory.FullName);
-                }
+                } // TODO move this to copy?
 
                 await Copy(fileInfo, targetDirectory, dateInferred);
             }
@@ -84,7 +115,7 @@ namespace PicOrganizer.Services
 
         private async Task Copy(FileInfo fileInfo, DirectoryInfo targetDirectory, DateTime dateInferred)
         {
-            string cleanName = _fileNameCleanerService.CleanNameUsingParentDir(fileInfo);
+            string cleanName = _fileNameCleanerService.AddParentDirectoryToFileName(fileInfo);
             fileInfo.CopyTo(Path.Combine(targetDirectory.FullName, cleanName), true);
             if (dateInferred != DateTime.MinValue)
             {
@@ -101,38 +132,5 @@ namespace PicOrganizer.Services
                 }
             }
         }
-
-        private async Task<DateTime> InferDateFromName(string name)
-        {
-            List<ModelResult>? modelResults = DateTimeRecognizer.RecognizeDateTime(name, Culture.English);
-            if (modelResults.Any())
-            {
-                foreach (var modelResult in modelResults)
-                {
-                    SortedDictionary<string, object>? resolution = modelResult.Resolution;
-                    _logger.LogDebug("Found {Count} item(s) in date resolution for name {Name}", resolution.Count(), name);
-                    foreach (KeyValuePair<string, object> resolutionValue in resolution)
-                    {
-                        var value = (List<Dictionary<string, string>>)resolutionValue.Value;
-                        _logger.LogTrace("Found {Count} value(s) in this resolution for name {Name}", value.Count, name);
-                        DateTime.TryParse(value?[0]?["timex"], out var result);
-                        if (result.Year > appSettings.StartingYearOfLibrary && result < DateTime.Now)
-                        {
-                            _logger.LogInformation("Inferring DateTaken '{Date}' from name {Name}", result.ToString(), name);
-                            return result;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                if (name.StartsWith("IMG-") || name.StartsWith("IMG_"))
-                    return await InferDateFromName(string.Format($"{name.Substring(4, 4)}-{name.Substring(8, 2)}-{name.Substring(10, 2)}"));
-                if (name.StartsWith("VZM.IMG_"))
-                    return await InferDateFromName(string.Format($"{name.Substring(8, 4)}-{name.Substring(12, 2)}-{name.Substring(14, 2)}"));
-            }
-
-            return DateTime.MinValue;
-        } 
     }
 }

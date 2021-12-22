@@ -108,7 +108,7 @@ namespace PicOrganizer.Services
 
         public async Task AddlocationFromTimeLine(DirectoryInfo di)
         {
-            var topFiles = di.GetFilesViaPattern(appSettings.PictureExtensions, SearchOption.TopDirectoryOnly);
+            var topFiles = di.GetFilesViaPattern(appSettings.PictureFilter, SearchOption.TopDirectoryOnly);
             await topFiles.ParallelForEachAsync<FileInfo>(AddlocationFromTimeLine);
         }
     }

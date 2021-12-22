@@ -11,6 +11,7 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .WriteTo.Console()
+    .WriteTo.File(@"c:\temp\log.txt",rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
 using IHost host = Host.CreateDefaultBuilder(args)
@@ -24,6 +25,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
             .AddSingleton<IReportWriterService, CsvReportWriterService>()
             .AddSingleton<IFileNameCleanerService, FileNameCleanerService>()
             .AddSingleton<ITimelineToFilesService, TimelineToFilesService>()
+            .AddSingleton<IDateRecognizerService, DateRecognizerService>()
             )
     .UseSerilog()
     .Build();
@@ -45,7 +47,7 @@ static async void DoWork(IServiceProvider services)
 
     logger.LogInformation("Starting...");
 
-    var target = new DirectoryInfo(@"C:\\temp\AllPics49");    
+    var target = new DirectoryInfo(@"C:\\temp\AllPics62");    
 
     var source_1 = new DirectoryInfo(@"C:\temp\Flickr33");
     var source_2 = new DirectoryInfo(@"C:\temp\google-photos");
@@ -57,10 +59,10 @@ static async void DoWork(IServiceProvider services)
         target.Delete(true);
         logger.LogInformation(@"Deleted {Target}...", target.FullName);
     }
+    await copyPictureService.Copy(source_1, target);
     await copyPictureService.Copy(source_4, target);
     await copyPictureService.Copy(source_3, target);
     await copyPictureService.Copy(source_2, target);
-    await copyPictureService.Copy(source_1, target);
 
     await duplicateReporter.ReportAndMoveDuplicates(target, new DirectoryInfo(target.FullName + "-" + appSettings.DuplicatesFolderName));
     await locationReporter.Report(target);

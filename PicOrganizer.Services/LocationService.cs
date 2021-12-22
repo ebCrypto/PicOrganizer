@@ -21,7 +21,7 @@ namespace PicOrganizer.Services
         public async Task<IEnumerable<ReportDetail>> Report(DirectoryInfo di)
         {
             logger.LogDebug("About to create Report in {Directory}", di.FullName);
-            var topFiles = di.GetFilesViaPattern(appSettings.PictureExtensions, SearchOption.TopDirectoryOnly).Select(f => LogInfo(f)).ToList();
+            var topFiles = di.GetFilesViaPattern(appSettings.PictureFilter, SearchOption.TopDirectoryOnly).Select(f => GetReportDetail(f)).ToList();
             await Task.WhenAll(topFiles);
             var topLevelReport = topFiles.Select(p => p.Result).ToList() ?? new List<ReportDetail>();
             await reportWriterService.Write(new FileInfo(Path.Combine(di.FullName, "reportDetail.csv")), topLevelReport.OrderBy(p=>p.DateTime).ToList());
@@ -38,7 +38,7 @@ namespace PicOrganizer.Services
             return dates.OrderBy(p=>p).Select(p => new ReportMissingLocation() { Start = p, End = p.AddDays(1).AddSeconds(-1) }).ToList();
         }
 
-        private async Task<ReportDetail> LogInfo(FileInfo fileInfo)
+        private async Task<ReportDetail> GetReportDetail(FileInfo fileInfo)
         {
             var r = new ReportDetail()
             {

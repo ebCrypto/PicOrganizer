@@ -5,9 +5,11 @@ VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PicOrganizerCmd", "PicOrganizerCmd\PicOrganizerCmd.csproj", "{7EF56A72-F798-4AE7-9F31-BFCE1B00CB92}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PicOrganizer.Services", "PicOrganizer.Services\PicOrganizer.Services.csproj", "{B7AC234D-B5CD-4C6E-A199-2BA6D599F92D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PicOrganizer.Services", "PicOrganizer.Services\PicOrganizer.Services.csproj", "{B7AC234D-B5CD-4C6E-A199-2BA6D599F92D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PicOrganizer.Models", "PicOrganizer.Models\PicOrganizer.Models.csproj", "{95D4539D-48B6-4B16-BD9E-8723BD09DE85}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PicOrganizer.Models", "PicOrganizer.Models\PicOrganizer.Models.csproj", "{95D4539D-48B6-4B16-BD9E-8723BD09DE85}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PicOrganizer.Tests", "PicOrganizer.Tests\PicOrganizer.Tests.csproj", "{D0821D91-7196-4507-A573-404EE8E1553A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{95D4539D-48B6-4B16-BD9E-8723BD09DE85}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{95D4539D-48B6-4B16-BD9E-8723BD09DE85}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{95D4539D-48B6-4B16-BD9E-8723BD09DE85}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D0821D91-7196-4507-A573-404EE8E1553A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D0821D91-7196-4507-A573-404EE8E1553A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D0821D91-7196-4507-A573-404EE8E1553A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D0821D91-7196-4507-A573-404EE8E1553A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
