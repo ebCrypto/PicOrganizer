@@ -20,7 +20,7 @@ namespace PicOrganizer.Services
 
         public async Task<IEnumerable<ReportDetail>> Report(DirectoryInfo di)
         {
-            logger.LogDebug("About to create Report in {Directory}", di.FullName);
+            logger.LogDebug("About to create Location Report in {Directory}", di.FullName);
             var topFiles = di.GetFilesViaPattern(appSettings.PictureFilter, SearchOption.TopDirectoryOnly).Select(f => GetReportDetail(f)).ToList();
             await Task.WhenAll(topFiles);
             var topLevelReport = topFiles.Select(p => p.Result).ToList() ?? new List<ReportDetail>();

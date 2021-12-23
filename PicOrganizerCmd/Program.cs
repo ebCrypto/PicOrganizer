@@ -20,7 +20,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
             .AddSingleton<ICopyDigitalMediaService, CopyDigitalMediaService>()
             .AddSingleton<IDirectoryNameService, DirectoryNameService>()
             .AddSingleton<LocationService>()
-            .AddSingleton<DirectoryDuplicateReporterService>()
+            .AddSingleton<DuplicatesService>()
             .AddSingleton<AppSettings>()
             .AddSingleton<IReportWriterService, CsvReportWriterService>()
             .AddSingleton<IFileNameCleanerService, FileNameCleanerService>()
@@ -41,13 +41,13 @@ static async void DoWork(IServiceProvider services)
     var copyPictureService = provider.GetRequiredService<ICopyDigitalMediaService>();
     var logger = provider.GetRequiredService<ILogger<Program>>();
     var locationReporter = provider.GetRequiredService<LocationService>();
-    var duplicateReporter = provider.GetRequiredService<DirectoryDuplicateReporterService>();
+    var duplicateService = provider.GetRequiredService<DuplicatesService>();
     var timelineService = provider.GetRequiredService<ITimelineToFilesService>();
     var appSettings = provider.GetRequiredService<AppSettings>();
 
     logger.LogInformation("Starting...");
 
-    var target = new DirectoryInfo(@"C:\\temp\AllPics62");    
+    var target = new DirectoryInfo(@"C:\\temp\AllPics66");    
 
     var source_1 = new DirectoryInfo(@"C:\temp\Flickr33");
     var source_2 = new DirectoryInfo(@"C:\temp\google-photos");
@@ -64,7 +64,7 @@ static async void DoWork(IServiceProvider services)
     await copyPictureService.Copy(source_3, target);
     await copyPictureService.Copy(source_2, target);
 
-    await duplicateReporter.ReportAndMoveDuplicates(target, new DirectoryInfo(target.FullName + "-" + appSettings.DuplicatesFolderName));
+    await duplicateService.MoveDuplicates(target, new DirectoryInfo(target.FullName + "-" + appSettings.DuplicatesFolderName));
     await locationReporter.Report(target);
 
     timelineService.LoadTimeLine(new FileInfo(@"C:\temp\eb-timeline.csv"));

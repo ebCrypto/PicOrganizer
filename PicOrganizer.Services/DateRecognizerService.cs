@@ -18,12 +18,12 @@ namespace PicOrganizer.Services
             this.appSettings = appSettings;
         }
 
-        public async Task<DateTime> InferDateFromName(string name)
+        public DateTime InferDateFromName(string name)
         {
             foreach (var dateFormat in appSettings.KnownUsedNameFormats)
             {
-                string numberOnly = Regex.Replace(name, "[^0-9_-]", "");
-                DateTime.TryParseExact(numberOnly, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result);
+                string noAlphaChar = Regex.Replace(name, "[^0-9_-]", "");
+                DateTime.TryParseExact(noAlphaChar, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result);
                 if (result != DateTime.MinValue)
                     return result;
             }

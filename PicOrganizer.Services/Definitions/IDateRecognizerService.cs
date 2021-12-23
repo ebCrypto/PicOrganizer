@@ -2,6 +2,6 @@
 {
     public interface IDateRecognizerService
     {
-        public Task<DateTime> InferDateFromName(string name);
+        public DateTime InferDateFromName(string name);
     }
 }

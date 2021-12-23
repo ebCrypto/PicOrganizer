@@ -42,9 +42,11 @@ namespace PicOrganizer.Services
                 _logger.LogTrace("Processing {File}", fileInfo.FullName);
                 
                 var destination = appSettings.VideosFolderName;
-                DateTime dateInferred = await dateRecognizerService.InferDateFromName(fileInfo.Name);
+                DateTime dateInferred = dateRecognizerService.InferDateFromName(fileInfo.Name);
                 if (dateInferred == DateTime.MinValue)
-                    dateInferred = await dateRecognizerService.InferDateFromName(fileInfo.Directory?.Name);
+                    dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Name));
+                if (dateInferred == DateTime.MinValue)
+                    dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Directory?.Name));
                 if (dateInferred != DateTime.MinValue)
                     destination = Path.Combine(destination,_directoryNameService.GetName(dateInferred));
 
@@ -69,8 +71,8 @@ namespace PicOrganizer.Services
             {
                 _logger.LogTrace("Processing {File}", fileInfo.FullName);
                 ImageFile imageFile;
-                DateTime dateTimeOriginal = DateTime.MinValue;
                 string destination = appSettings.UnkownFolderName;
+                DateTime dateTimeOriginal = DateTime.MinValue;
                 DateTime dateInferred = DateTime.MinValue;
                 try
                 {
@@ -78,11 +80,12 @@ namespace PicOrganizer.Services
                     ExifProperty? tag;
                     tag = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
                     _ = DateTime.TryParse(tag?.ToString(), out dateTimeOriginal);
-                    //TODO use cleanName
                     if (dateTimeOriginal == DateTime.MinValue)
-                        dateInferred = await dateRecognizerService.InferDateFromName(fileInfo.Name);
+                        dateInferred = dateRecognizerService.InferDateFromName(fileInfo.Name);
                     if (dateTimeOriginal == DateTime.MinValue && dateInferred == DateTime.MinValue)
-                        dateInferred = await dateRecognizerService.InferDateFromName(fileInfo.Directory?.Name);
+                        dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Name));
+                    if (dateTimeOriginal == DateTime.MinValue && dateInferred == DateTime.MinValue)
+                        dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Directory?.Name));
                     if (dateInferred == DateTime.MinValue)
                         destination = _directoryNameService.GetName(dateTimeOriginal);
                     else
@@ -116,19 +119,20 @@ namespace PicOrganizer.Services
         private async Task Copy(FileInfo fileInfo, DirectoryInfo targetDirectory, DateTime dateInferred)
         {
             string cleanName = _fileNameCleanerService.AddParentDirectoryToFileName(fileInfo);
-            fileInfo.CopyTo(Path.Combine(targetDirectory.FullName, cleanName), true);
+            string destFileName = Path.Combine(targetDirectory.FullName, cleanName);
+            fileInfo.CopyTo(destFileName, true);
             if (dateInferred != DateTime.MinValue)
             {
                 try
                 {
-                    var imageFile = await ImageFile.FromFileAsync(fileInfo.FullName);
+                    var imageFile = await ImageFile.FromFileAsync(destFileName);
                     imageFile.Properties.Set(ExifTag.DateTimeOriginal, dateInferred);
-                    await imageFile.SaveAsync(fileInfo.FullName);
-                    _logger.LogDebug("Added date {Date} to file {File}", dateInferred.ToString(), fileInfo.FullName);
+                    await imageFile.SaveAsync(destFileName);
+                    _logger.LogDebug("Added date {Date} to file {File}", dateInferred.ToString(), destFileName);
                 }
                 catch (Exception e)
                 {
-                    _logger.LogWarning(e, "Unable to add date {Date} to file {File}", dateInferred.ToString(), fileInfo.FullName);
+                    _logger.LogWarning(e, "Unable to add date {Date} to file {File}", dateInferred.ToString(), destFileName);
                 }
             }
         }

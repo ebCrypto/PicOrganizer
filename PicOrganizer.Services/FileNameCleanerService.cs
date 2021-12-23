@@ -31,40 +31,39 @@ namespace PicOrganizer.Services
         public string CleanName(string input)
         {
             var output = input;
-            var replaces = records.Where(p => input.Contains(p.Original)).ToList();
-            if (replaces.Any() && !string.IsNullOrEmpty(input))
-                foreach (var replace in replaces)
-                    output = input.Replace(replace.Original, replace.ReplaceWith);
+            if (records != null && records.Any())
+            {
+                var replaces = records.Where(p => input.Contains(p.Original)).ToList();
+                if (replaces.Any() && !string.IsNullOrEmpty(input))
+                    foreach (var replace in replaces)
+                        output = input.Replace(replace.Original, replace.ReplaceWith);
+            }
             return output;
         }
 
         public string AddParentDirectoryToFileName(FileInfo fileInfo)
         {
-            if (records != null && records.Any())
+            try
             {
-                try
-                {
-                    string directoryName = CleanName(fileInfo.Directory.Name);
+                string directoryName = CleanName(fileInfo.Directory.Name);
+                if (directoryName.Length > 0)
                     directoryName += " ";
-                    var fileName = fileInfo.Name;
-                    if (Guid.TryParse(fileName[^(fileInfo.Extension.Length)].ToString(), out var resultGuid))
-                    {
-                        logger.LogDebug("Found Guid {File}", fileName);
-                        fileName = Math.Abs(fileName.GetHashCode()) + fileInfo.Extension;
-                    }
-                    string result = string.Format($"{directoryName}{fileName}").Replace("__", "_");
-                    if (result.StartsWith("_"))
-                        result = result.Substring(1);
-                    return result;
-                }
-                catch (Exception e)
+                var fileName = fileInfo.Name;
+                if (Guid.TryParse(fileName[^(fileInfo.Extension.Length)].ToString(), out var resultGuid))
                 {
-                    logger.LogError(e, "Can't make name {Name}", fileInfo.FullName);
-                    return Guid.NewGuid().GetHashCode().ToString() + fileInfo.Extension;
+                    logger.LogDebug("Found Guid {File}", fileName);
+                    fileName = Math.Abs(fileName.GetHashCode()) + fileInfo.Extension;
                 }
+                string result = string.Format($"{directoryName}{fileName}").Replace("__", "_");
+                if (result.StartsWith("_"))
+                    result = result.Substring(1);
+                return result;
             }
-            else
-                return fileInfo?.Name;
+            catch (Exception e)
+            {
+                logger.LogError(e, "Can't make name {Name}", fileInfo.FullName);
+                return Guid.NewGuid().GetHashCode().ToString() + fileInfo.Extension;
+            }
         }
     }
 }
