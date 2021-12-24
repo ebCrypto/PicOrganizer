@@ -2,6 +2,6 @@
 {
     public interface IDirectoryNameService
     {
-        string GetName(DateTime dt);
+        string MakeName(DateTime dt);
     }
 }

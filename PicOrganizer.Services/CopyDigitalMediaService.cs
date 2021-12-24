@@ -48,7 +48,7 @@ namespace PicOrganizer.Services
                 if (dateInferred == DateTime.MinValue)
                     dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Directory?.Name));
                 if (dateInferred != DateTime.MinValue)
-                    destination = Path.Combine(destination,_directoryNameService.GetName(dateInferred));
+                    destination = Path.Combine(destination,_directoryNameService.MakeName(dateInferred));
 
                 var targetDirectory = new DirectoryInfo(Path.Combine(to.FullName, destination));
                 if (!targetDirectory.Exists)
@@ -87,9 +87,9 @@ namespace PicOrganizer.Services
                     if (dateTimeOriginal == DateTime.MinValue && dateInferred == DateTime.MinValue)
                         dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Directory?.Name));
                     if (dateInferred == DateTime.MinValue)
-                        destination = _directoryNameService.GetName(dateTimeOriginal);
+                        destination = _directoryNameService.MakeName(dateTimeOriginal);
                     else
-                        destination = _directoryNameService.GetName(dateInferred);
+                        destination = _directoryNameService.MakeName(dateInferred);
                 }
                 catch (NotValidJPEGFileException)
                 {

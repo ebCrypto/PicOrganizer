@@ -77,39 +77,5 @@ namespace PicOrganizer.Services
             var myFileData = File.ReadAllBytes(fi.FullName);
             return string.Join(" ", MD5.Create().ComputeHash(myFileData));
         }
-
-        //private async Task<ReportDetail> LoadDateTaken(FileInfo fileInfo)
-        //{
-        //    var r = new ReportDetail()
-        //    {
-        //        FullFileName = fileInfo.FullName,
-        //    };
-        //    try
-        //    {
-        //        ImageFile imageFile;
-        //        ExifProperty da;
-        //        DateTime dt = DateTime.MinValue;
-        //        try
-        //        {
-        //            imageFile = await ImageFile.FromFileAsync(fileInfo.FullName);
-        //            da = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
-        //            _ = DateTime.TryParse(da?.ToString(), out dt);
-        //            r.DateTime = dt;
-        //        }
-        //        catch (NotValidJPEGFileException e)
-        //        {
-        //            logger.LogWarning("{File} not a valid JPEG {Message}", fileInfo.FullName, e.Message);
-        //        }
-        //        catch (NotValidImageFileException e)
-        //        {
-        //            logger.LogWarning("{File} not a valid image {Message}", fileInfo.FullName, e.Message);
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        logger.LogError(ex, "{ExceptionMessage} {FileName}", ex.Message, fileInfo.Name);
-        //    }
-        //    return r;
-        //}
     }
 }

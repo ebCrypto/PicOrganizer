@@ -31,21 +31,21 @@ namespace PicOrganizer.Services
         public string CleanName(string input)
         {
             var output = input;
-            if (records != null && records.Any())
+            if (records != null && records.Any() && !string.IsNullOrEmpty(input))
             {
-                var replaces = records.Where(p => input.Contains(p.Original)).ToList();
-                if (replaces.Any() && !string.IsNullOrEmpty(input))
-                    foreach (var replace in replaces)
-                        output = input.Replace(replace.Original, replace.ReplaceWith);
+                foreach (var record in records)
+                    output = output.Replace(record.Original, record.ReplaceWith);
             }
             return output;
         }
 
         public string AddParentDirectoryToFileName(FileInfo fileInfo)
         {
+            if (fileInfo == null)
+                return String.Empty;
             try
             {
-                string directoryName = CleanName(fileInfo.Directory.Name);
+                string directoryName = CleanName(fileInfo.Directory?.Name);
                 if (directoryName.Length > 0)
                     directoryName += " ";
                 var fileName = fileInfo.Name;

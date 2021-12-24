@@ -8,7 +8,7 @@ namespace PicOrganizer.Services
 {
     public class DirectoryNameService: IDirectoryNameService
     {
-        public string GetName (DateTime dt)
+        public string MakeName (DateTime dt)
         {
             return dt.ToString ("yyyy-MM");
         }

@@ -47,7 +47,7 @@ static async void DoWork(IServiceProvider services)
 
     logger.LogInformation("Starting...");
 
-    var target = new DirectoryInfo(@"C:\\temp\AllPics66");    
+    var target = new DirectoryInfo(@"C:\\temp\AllPics76");    
 
     var source_1 = new DirectoryInfo(@"C:\temp\Flickr33");
     var source_2 = new DirectoryInfo(@"C:\temp\google-photos");

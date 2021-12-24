@@ -14,7 +14,20 @@
             VideoExtensions = new[] { ".avi", ".mpg", ".mpeg", ".mp4", ".mov", ".wmv", ".mkv" };
             StartingYearOfLibrary = 1970;
             ReportDuplicatesName = "reportDuplicates.csv";
-            KnownUsedNameFormats = new string[] { "yyyy-MM-dd-HH-mm-ss", "yyyy-MM-dd_HH-mm-ss", "_yyyy-MM-dd-HH-mm-ss", "yyyyMMdd_HHmmss-", "yyyyMMdd_HHmmss_01", "yyyyMMdd", "_yyyyMMdd", "-yyyyMMdd", "yyyyMMddHHmm" };
+            KnownUsedNameFormats = new string[] { 
+                "yyyy-MM-dd-HH-mm-ss", 
+                "yyyy-MM-dd_HH-mm-ss", 
+                "yyyyMMdd_HHmmss-", 
+                "yyyyMMddHHmm" ,
+                "yyyyMMdd_HHmmss",
+                "yyyyMMdd", 
+                "MMddyyHHmm",
+                "_yyyy-MM-dd-HH-mm-ss", 
+                "_yyyyMMdd_HHmmss", 
+                "_yyyyMMdd_HHmmss_ff", 
+                "_yyyyMMdd", 
+                "-yyyyMMdd", 
+            };
         }
 
         public string VideosFolderName { get; set; }

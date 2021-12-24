@@ -18,14 +18,52 @@ namespace PicOrganizer.Services
             this.appSettings = appSettings;
         }
 
+        private DateTime InferDateFromWhatsappName(string name)
+        {
+            var regex = new Regex(@"IMG-[0-9]{8}-WA[0-9]{4}");
+            if (regex.IsMatch(name))
+            {
+                DateTime.TryParseExact(name.Substring(4,8), "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var result);
+                return result;
+            }
+            else
+                return DateTime.MinValue;
+        }
+
         public DateTime InferDateFromName(string name)
         {
+            if (name.Contains("."))
+                name = name.Substring(0,name.LastIndexOf("."));
+            var whatsapp = InferDateFromWhatsappName(name);
+            if (whatsapp != DateTime.MinValue)
+                return whatsapp;
+            string noAlphaChar = Regex.Replace(name, "[^0-9_-]", "");            
             foreach (var dateFormat in appSettings.KnownUsedNameFormats)
             {
-                string noAlphaChar = Regex.Replace(name, "[^0-9_-]", "");
+
                 DateTime.TryParseExact(noAlphaChar, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result);
                 if (result != DateTime.MinValue)
                     return result;
+            }
+            noAlphaChar = noAlphaChar.Replace("-", "_");            
+            foreach (var dateFormat in appSettings.KnownUsedNameFormats)
+            {
+                if (noAlphaChar.Contains("_"))
+                {
+                    var items = noAlphaChar.Split("_");
+                    if (items.Length > 2)
+                    {
+                        DateTime.TryParseExact(String.Format($"{items[0]}_{items[1]}"), dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result);
+                        if (result != DateTime.MinValue)
+                            return result;
+                    }
+                    if (items.Length > 1)
+                    {
+                        DateTime.TryParseExact(String.Format($"{items[0]}"), dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result);
+                        if (result != DateTime.MinValue)
+                            return result;
+                    }
+                }
             }
 
             List<ModelResult>? modelResults = DateTimeRecognizer.RecognizeDateTime(name, Culture.English);
