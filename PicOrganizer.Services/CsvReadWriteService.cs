@@ -1,15 +1,14 @@
 ﻿using CsvHelper;
 using Microsoft.Extensions.Logging;
-using PicOrganizer.Models;
 using System.Globalization;
 
 namespace PicOrganizer.Services
 {
-    public class CsvReportWriterService : IReportWriterService
+    public class CsvReadWriteService : IReportReadWriteService
     {
-        private readonly ILogger<CsvReportWriterService> logger;
+        private readonly ILogger<CsvReadWriteService> logger;
 
-        public CsvReportWriterService(ILogger<CsvReportWriterService> logger)
+        public CsvReadWriteService(ILogger<CsvReadWriteService> logger)
         {
             this.logger = logger;
         }
@@ -25,7 +24,15 @@ namespace PicOrganizer.Services
             }
             else
                 logger.LogDebug("Nothing to write to {FileName}", fileInfo.FullName);
+        }
 
+        public async Task<IEnumerable<T>> Read<T>(FileInfo fileInfo)
+        {
+            using var reader = new StreamReader(fileInfo.FullName);
+            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+            var records = csv.GetRecords<T>().ToList();
+            logger.LogDebug("Read {Count} from {FileName}", records.Count(), fileInfo.FullName);
+            return records;
         }
     }
 }

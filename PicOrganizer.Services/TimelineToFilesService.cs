@@ -11,58 +11,15 @@ namespace PicOrganizer.Services
     {
         private readonly AppSettings appSettings;
         private readonly ILogger<TimelineToFilesService> logger;
+        private readonly ILocationService locationService;
 
         public List<ReportMissingLocation> Timeline { get; private set; }
 
-        public TimelineToFilesService(AppSettings appSettings, ILogger<TimelineToFilesService> logger)
+        public TimelineToFilesService(AppSettings appSettings, ILogger<TimelineToFilesService> logger, ILocationService locationService)
         {
             this.appSettings = appSettings;
             this.logger = logger;
-        }
-
-        public async Task AddFloatCoordinatesToImage(string latitude, string longitude, FileInfo fi)
-        {
-            try
-            {
-                var ef = await ImageFile.FromFileAsync(fi.FullName);
-                var c = new Coordinate(Convert.ToDouble(latitude), Convert.ToDouble(longitude), DateTime.Today);
-                MakeLatitude(c, ef);
-                MakeLongitude(c, ef);
-                await ef.SaveAsync(fi.FullName);
-                logger.LogDebug("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.Name);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "unable to add coordinates to {File}", fi.FullName);
-            }
-        }
-
-        private static void MakeLongitude(Coordinate coordinate, ImageFile ef)
-        {
-            string lon = coordinate.Longitude.ToString();
-            if (string.IsNullOrEmpty(lon))
-                return;
-            var items = lon.Split(" ");
-
-            ef.Properties.Set(ExifTag.GPSLongitude, GetFloat(items[1]), GetFloat(items[2]), GetFloat(items[3]));
-            ef.Properties.Set(ExifTag.GPSLongitudeRef, items[0] == "E" ? GPSLongitudeRef.East : GPSLongitudeRef.West);
-        }
-
-        private static void MakeLatitude(Coordinate coordinate, ImageFile ef)
-        {
-            // N 55º 40' 35.883"
-            string lat = coordinate.Latitude.ToString();
-            if (string.IsNullOrEmpty(lat))
-                return;
-            var items = lat.Split(" ");
-
-            ef.Properties.Set(ExifTag.GPSLatitude, GetFloat(items[1]), GetFloat(items[2]), GetFloat(items[3]));
-            ef.Properties.Set(ExifTag.GPSLatitudeRef, items[0] == "N" ? GPSLatitudeRef.North : GPSLatitudeRef.South);
-        }
-
-        private static float GetFloat(string s)
-        {
-            return Convert.ToSingle(s.Substring(0, s.Length - 1));
+            this.locationService = locationService;
         }
 
         public void LoadTimeLine(FileInfo csv)
@@ -75,30 +32,46 @@ namespace PicOrganizer.Services
 
         public void VerifyTimeLine()
         {
-
+            DateTime? lastEnd = null;   
+            foreach ( var time in Timeline)
+            {
+                if (lastEnd != null && time.Start != null && time.Start < lastEnd)
+                    logger.LogWarning("Unexpected timeline element starting at {Start}, which is before {LastEnd}", time.Start.ToString(), lastEnd.ToString());
+                lastEnd = time.End;
+            }
         }
 
         public async Task AddlocationFromTimeLine(FileInfo fi)
         {
-            var imageFile = await ImageFile.FromFileAsync(fi.FullName);
-            var da = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
-            _ = DateTime.TryParse(da?.ToString(), out var dt);
-
-            ReportMissingLocation? result = Timeline.Where(p => p.Start <= dt && p.End >= dt).SingleOrDefault();
-            if ( result == null)
-            {
-                logger.LogError("Unexpected TimeLine");
-                return;
-            }
             try
             {
-                var latitude = result.Latitude;
-                var longitude = result.Longitude;
+                var imageFile = await ImageFile.FromFileAsync(fi.FullName);
+                var da = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
+                _ = DateTime.TryParse(da?.ToString(), out var dt);
+
+                if (dt == DateTime.MinValue)
+                    return;
+
+                var result = Timeline.Where(p => p.Start <= dt && p.End >= dt && !string.IsNullOrEmpty(p.Latitude) && !string.IsNullOrEmpty(p.Longitude));
+                if (result == null || !result.Any())
+                {
+                    logger.LogWarning("No location found on {Date} using the provided timeline", dt.ToString());
+                    return;
+                }
+                if (result.Count() > 1)
+                {
+                    logger.LogWarning("Multiple locations ({Count}) found on {Date} using the provided timeline", result.Count(), dt.ToString());
+                    return;
+                }
+                var firestResult = result.First();
+
+                var latitude = firestResult.Latitude;
+                var longitude = firestResult.Longitude;
                 var c = new Coordinate(Convert.ToDouble(latitude), Convert.ToDouble(longitude), DateTime.Today);
-                MakeLatitude(c, imageFile);
-                MakeLongitude(c, imageFile);
+                locationService.MakeLatitude(c, imageFile);
+                locationService.MakeLongitude(c, imageFile);
                 await imageFile.SaveAsync(fi.FullName);
-                logger.LogDebug("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.Name);
+                logger.LogDebug("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
             }
             catch (Exception ex)
             {
@@ -108,8 +81,8 @@ namespace PicOrganizer.Services
 
         public async Task AddlocationFromTimeLine(DirectoryInfo di)
         {
-            var topFiles = di.GetFilesViaPattern(appSettings.PictureFilter, SearchOption.TopDirectoryOnly);
-            await topFiles.ParallelForEachAsync<FileInfo>(AddlocationFromTimeLine);
+            var topFiles = di.GetFilesViaPattern(appSettings.PictureFilter, SearchOption.AllDirectories);
+            await topFiles.ParallelForEachAsync<FileInfo>(AddlocationFromTimeLine, appSettings.MaxDop);
         }
     }
 }

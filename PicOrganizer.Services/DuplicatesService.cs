@@ -11,9 +11,9 @@ namespace PicOrganizer.Services
     {
         private readonly AppSettings appSettings;
         private readonly ILogger<DuplicatesService> logger;
-        private readonly IReportWriterService reportWriterService;
+        private readonly IReportReadWriteService reportWriterService;
 
-        public DuplicatesService(AppSettings appSettings, ILogger<DuplicatesService> logger, IReportWriterService reportWriterService)
+        public DuplicatesService(AppSettings appSettings, ILogger<DuplicatesService> logger, IReportReadWriteService reportWriterService)
         {
             this.appSettings = appSettings;
             this.logger = logger;
@@ -53,7 +53,7 @@ namespace PicOrganizer.Services
                 }
             }
             logger.LogInformation("Looped through {TotalCount} and found {DuplicateCount} duplicates", topFilesLength.Count, countDuplicates);
-            await di.GetDirectories().ToList().ParallelForEachAsync<DirectoryInfo, DirectoryInfo>(MoveDuplicates, destination);
+            await di.GetDirectories().ToList().ParallelForEachAsync<DirectoryInfo, DirectoryInfo>(MoveDuplicates, destination, appSettings.MaxDop);
         }
                                                           
         private FileInfo MoveDuplicate(FileInfo preExistingFile, FileInfo fileInfo, DirectoryInfo destination)

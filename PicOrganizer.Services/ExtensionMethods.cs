@@ -33,7 +33,7 @@ namespace PicOrganizer.Services
     {
         //https://github.com/houseofcat/Tesseract/blob/master/src/HouseofCat.Extensions/IEnumerableExtensions.cs
 
-        public static Task ParallelForEachAsync<T>(this IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP = 4)
+        public static Task ParallelForEachAsync<T>(this IEnumerable<T> source, Func<T, Task> funcBody, int maxDoP )
         {
             async Task AwaitPartition(IEnumerator<T> partition)
             {
@@ -56,7 +56,7 @@ namespace PicOrganizer.Services
                     .Select(AwaitPartition));
         }
 
-        public static Task ParallelForEachAsync<T1, T2>(this IEnumerable<T1> source, Func<T1, T2, Task> funcBody, T2 secondInput, int maxDoP = 4)
+        public static Task ParallelForEachAsync<T1, T2>(this IEnumerable<T1> source, Func<T1, T2, Task> funcBody, T2 secondInput, int maxDoP )
         {
             async Task AwaitPartition(IEnumerator<T1> partition)
             {
@@ -78,7 +78,7 @@ namespace PicOrganizer.Services
                     .Select(AwaitPartition));
         }
 
-        public static Task ParallelForEachAsync<T1, T2, T3>(this IEnumerable<T1> source, Func<T1, T2, T3, Task> funcBody, T2 secondInput, T3 thirdInput, int maxDoP = 4)
+        public static Task ParallelForEachAsync<T1, T2, T3>(this IEnumerable<T1> source, Func<T1, T2, T3, Task> funcBody, T2 secondInput, T3 thirdInput, int maxDoP )
         {
             async Task AwaitPartition(IEnumerator<T1> partition)
             {
@@ -100,7 +100,7 @@ namespace PicOrganizer.Services
                     .Select(AwaitPartition));
         }
 
-        public static Task ParallelForEachAsync<T1, T2, T3, T4>(this IEnumerable<T1> source, Func<T1, T2, T3, T4, Task> funcBody, T2 secondInput, T3 thirdInput, T4 fourthInput, int maxDoP = 4)
+        public static Task ParallelForEachAsync<T1, T2, T3, T4>(this IEnumerable<T1> source, Func<T1, T2, T3, T4, Task> funcBody, T2 secondInput, T3 thirdInput, T4 fourthInput, int maxDoP)
         {
             async Task AwaitPartition(IEnumerator<T1> partition)
             {

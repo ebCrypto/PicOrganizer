@@ -20,10 +20,10 @@ namespace PicOrganizer.Services
 
         private DateTime InferDateFromWhatsappName(string name)
         {
-            var regex = new Regex(@"IMG-[0-9]{8}-WA[0-9]{4}");
+            var regex = new Regex(appSettings.WhatsappNameRegex);
             if (regex.IsMatch(name))
             {
-                DateTime.TryParseExact(name.Substring(4,8), "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var result);
+                DateTime.TryParseExact(name.Substring(4, 8), "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var result);
                 return result;
             }
             else
@@ -32,7 +32,7 @@ namespace PicOrganizer.Services
 
         public DateTime InferDateFromName(string name)
         {
-            if (name.Contains("."))
+            if (name.Contains('.'))
                 name = name.Substring(0,name.LastIndexOf("."));
             var whatsapp = InferDateFromWhatsappName(name);
             if (whatsapp != DateTime.MinValue)
@@ -48,7 +48,7 @@ namespace PicOrganizer.Services
             noAlphaChar = noAlphaChar.Replace("-", "_");            
             foreach (var dateFormat in appSettings.KnownUsedNameFormats)
             {
-                if (noAlphaChar.Contains("_"))
+                if (noAlphaChar.Contains('_'))
                 {
                     var items = noAlphaChar.Split("_");
                     if (items.Length > 2)

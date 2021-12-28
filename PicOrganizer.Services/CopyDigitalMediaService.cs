@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Recognizers.Text;
 using Microsoft.Recognizers.Text.DateTime;
 using PicOrganizer.Models;
+using System.Text.RegularExpressions;
 
 namespace PicOrganizer.Services
 {
@@ -26,13 +27,14 @@ namespace PicOrganizer.Services
 
         public async Task Copy(DirectoryInfo from, DirectoryInfo to)
         {
-            _logger.LogInformation(@"Processing {Source}", from.FullName);
+            _logger.LogInformation(@"About to Copy Videos from {Source}...", from.FullName);
             await from.GetFiles(appSettings.AllFileExtensions, SearchOption.AllDirectories)
                 .Where(p => appSettings.VideoExtensions.Contains(p.Extension.ToLower()))
-                .ParallelForEachAsync<FileInfo, DirectoryInfo>(CopyOneVideo, to);
+                .ParallelForEachAsync<FileInfo, DirectoryInfo>(CopyOneVideo, to, appSettings.MaxDop);
+            _logger.LogInformation(@"About to Copy Pictures from {Source}...", from.FullName);
             await from.GetFiles(appSettings.AllFileExtensions, SearchOption.AllDirectories)
                 .Where(p => appSettings.PictureExtensions.Contains(p.Extension.ToLower()))
-                .ParallelForEachAsync<FileInfo, DirectoryInfo>(CopyOnePicture, to);
+                .ParallelForEachAsync<FileInfo, DirectoryInfo>(CopyOnePicture, to, appSettings.MaxDop);
         }
 
         private async Task CopyOneVideo(FileInfo fileInfo, DirectoryInfo to)
@@ -80,13 +82,17 @@ namespace PicOrganizer.Services
                     ExifProperty? tag;
                     tag = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
                     _ = DateTime.TryParse(tag?.ToString(), out dateTimeOriginal);
+                    string cleanFolderName = _fileNameCleanerService.CleanName(fileInfo.Directory?.Name);
                     if (dateTimeOriginal == DateTime.MinValue)
                         dateInferred = dateRecognizerService.InferDateFromName(fileInfo.Name);
                     if (dateTimeOriginal == DateTime.MinValue && dateInferred == DateTime.MinValue)
                         dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Name));
                     if (dateTimeOriginal == DateTime.MinValue && dateInferred == DateTime.MinValue)
-                        dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Directory?.Name));
-                    if (dateInferred == DateTime.MinValue)
+                    {
+                        dateInferred = dateRecognizerService.InferDateFromName(cleanFolderName);
+                    }
+
+                    if (dateInferred == DateTime.MinValue && !cleanFolderName.ToLowerInvariant().Contains(appSettings.Scanned))
                         destination = _directoryNameService.MakeName(dateTimeOriginal);
                     else
                         destination = _directoryNameService.MakeName(dateInferred);
@@ -101,7 +107,10 @@ namespace PicOrganizer.Services
                     destination = appSettings.VideosFolderName;
                 }
 
-                var targetDirectory = new DirectoryInfo(Path.Combine(to.FullName, destination));
+                bool sourceWhatsapp = SourceWhatsApp(fileInfo);
+                var targetDirectory = SourceWhatsApp(fileInfo)? 
+                                            new DirectoryInfo(Path.Combine(to.FullName, sourceWhatsapp ? appSettings.WhatsappFolderName : string.Empty, destination)):
+                                            new DirectoryInfo(Path.Combine(to.FullName, destination));
                 if (!targetDirectory.Exists)
                 {
                     targetDirectory.Create();
@@ -135,6 +144,12 @@ namespace PicOrganizer.Services
                     _logger.LogWarning(e, "Unable to add date {Date} to file {File}", dateInferred.ToString(), destFileName);
                 }
             }
+        }
+
+        private bool SourceWhatsApp(FileInfo fi)
+        {
+            var regex = new Regex(appSettings.WhatsappNameRegex);
+            return regex.IsMatch(fi.Name);
         }
     }
 }
