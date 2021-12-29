@@ -135,7 +135,7 @@ namespace PicOrganizer.Services
                 try
                 {
                     var imageFile = await ImageFile.FromFileAsync(destFileName);
-                    imageFile.Properties.Set(ExifTag.DateTimeOriginal, dateInferred);
+                    imageFile.Properties.Set(ExifTag.DateTimeOriginal, new ExifDateTime(ExifTag.DateTimeOriginal, dateInferred));
                     await imageFile.SaveAsync(destFileName);
                     _logger.LogDebug("Added date {Date} to file {File}", dateInferred.ToString(), destFileName);
                 }

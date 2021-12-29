@@ -5,6 +5,7 @@ using Serilog;
 using Serilog.Events;
 using PicOrganizer.Services;
 using PicOrganizer.Models;
+using static PicOrganizer.Services.ILocationService;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
@@ -49,19 +50,21 @@ static async void DoWork(IServiceProvider services)
 
     logger.LogInformation("Starting...");
 
-    var root = new DirectoryInfo(@"C:\temp\");
-    var target = new DirectoryInfo(@"C:\temp\Emmanuel2");    
+    var root = new DirectoryInfo(@"C:\temp\source");
+    var target = new DirectoryInfo(@"C:\temp\Emmanuel");    
 
-    var source_1 = new DirectoryInfo(@"C:\temp\Flickr33");
-    var source_2 = new DirectoryInfo(@"C:\temp\google-photos");
-    var source_3 = new DirectoryInfo(@"C:\temp\RebelXti");
-    var source_4 = new DirectoryInfo(@"C:\temp\samsung-lg");
+    var source_1 = new DirectoryInfo(Path.Combine(root.FullName,"Flickr"));
+    var source_2 = new DirectoryInfo(Path.Combine(root.FullName, "google-photos"));
+    var source_3 = new DirectoryInfo(Path.Combine(root.FullName, "RebelXti"));
+    var source_4 = new DirectoryInfo(Path.Combine(root.FullName, "samsung-lg"));
+    var source_5 = new DirectoryInfo(Path.Combine(root.FullName, "iPhone"));
 
     if (target.Exists)
     {
         target.Delete(true);
         logger.LogInformation(@"Deleted {Target}...", target.FullName);
     }
+    await copyPictureService.Copy(source_5, target);
     await copyPictureService.Copy(source_1, target);
     await copyPictureService.Copy(source_4, target);
     await copyPictureService.Copy(source_3, target);
@@ -69,13 +72,16 @@ static async void DoWork(IServiceProvider services)
 
     await duplicateService.MoveDuplicates(target, new DirectoryInfo(target.FullName + "-" + appSettings.DuplicatesFolderName));
 
-    await locationService.ReportMissing(target);
+    await locationService.ReportMissing(target, "before");
+
     timelineService.LoadTimeLine(new FileInfo(@"C:\temp\eb-timeline.csv"));
-    await timelineService.AddlocationFromTimeLine(target);
-    await locationService.WriteLocationFromClosestKnownIfSameDay(target);
-    await locationService.ReportMissing(target);
+    await locationService.WriteLocation(target, LocationWriter.FromClosestSameDay);
+    await locationService.WriteLocation(target, LocationWriter.FromTimeline);
+
+    await locationService.ReportMissing(target, "after");
 
     tagService.CreateTags(target);
+    tagService.AddRelevantTags(target);
 
     logger.LogInformation("Done...");
 }

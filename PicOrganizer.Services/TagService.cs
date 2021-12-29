@@ -52,17 +52,17 @@ namespace PicOrganizer.Services
             Parallel.ForEach(words, parallelOptions, item => Tags.Add(item.ToLowerInvariant()));
         }
 
-        public void AddRelevantTagFromNameToImage(DirectoryInfo di)
+        public void AddRelevantTags(DirectoryInfo di)
         {
             logger.LogInformation("Starting to tag pictures in Directory {Directory}", di.FullName);
             Parallel.ForEach(
                di.GetFilesViaPattern(appSettings.PictureFilter, SearchOption.AllDirectories),
                parallelOptions,
-               async f => await AddRelevantTagFromNameToImage(f, di))
+               async f => await AddRelevantTags(f, di))
                ;
         }
 
-        public async Task AddRelevantTagFromNameToImage(FileInfo f, DirectoryInfo rootToIgnore)
+        public async Task AddRelevantTags(FileInfo f, DirectoryInfo rootToIgnore)
         {
             var words = MakeWordList(f, rootToIgnore);
             var relevantTags = Tags.Intersect(words);
