@@ -9,15 +9,19 @@ namespace PicOrganizer.Services
     {
         private readonly AppSettings appSettings;
         private readonly ILogger<FileNameCleanerService> logger;
-        readonly List<DirectoryReplace> records;
+        List<DirectoryReplace> records;
 
         public FileNameCleanerService(AppSettings appSettings, ILogger<FileNameCleanerService> logger)
         {
             this.appSettings = appSettings;
             this.logger = logger;
+        }
+
+        public void LoadCleanDirList(FileInfo fi)
+        {
             try
             {
-                using var reader = new StreamReader("Data\\CleanDirectoryName.csv");
+                using var reader = new StreamReader(fi.FullName);
                 using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
                 records = csv.GetRecords<DirectoryReplace>().ToList();
                 logger.LogDebug("Found {Count} entries in CleanDirectoryName.csv", records.Count);

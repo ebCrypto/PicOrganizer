@@ -71,6 +71,11 @@ namespace PicOrganizer.Services
         {
             try
             {
+                if ( appSettings.ExcludedFiles.Contains(fileInfo.Name))
+                {
+                    _logger.LogInformation("Skipping file {File} because it is part of the exclusion list", fileInfo.FullName);
+                    return;
+                }
                 _logger.LogTrace("Processing {File}", fileInfo.FullName);
                 ImageFile imageFile;
                 string destination = appSettings.UnkownFolderName;

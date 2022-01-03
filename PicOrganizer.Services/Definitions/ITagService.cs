@@ -4,6 +4,6 @@
     {
         public void CreateTags(DirectoryInfo di);
         
-        public void AddRelevantTags(DirectoryInfo di);
+        public void AddRelevantTagsToFiles(DirectoryInfo di);
     }
 }

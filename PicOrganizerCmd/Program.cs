@@ -47,8 +47,10 @@ static async void DoWork(IServiceProvider services)
     var timelineService = provider.GetRequiredService<ITimelineToFilesService>();
     var appSettings = provider.GetRequiredService<AppSettings>();
     var tagService = provider.GetRequiredService<ITagService>();
+    var dirNameService = provider.GetRequiredService<IFileNameCleanerService>();
 
     logger.LogInformation("Starting...");
+    dirNameService.LoadCleanDirList(new FileInfo(@"C:\temp\CleanDirectoryName.csv"));
 
     var root = new DirectoryInfo(@"C:\temp\source");
     var target = new DirectoryInfo(@"C:\temp\Emmanuel");    
@@ -58,6 +60,7 @@ static async void DoWork(IServiceProvider services)
     var source_3 = new DirectoryInfo(Path.Combine(root.FullName, "RebelXti"));
     var source_4 = new DirectoryInfo(Path.Combine(root.FullName, "samsung-lg"));
     var source_5 = new DirectoryInfo(Path.Combine(root.FullName, "iPhone"));
+    var source_6 = new DirectoryInfo(Path.Combine(root.FullName, "dropbox"));
 
     if (target.Exists)
     {
@@ -65,6 +68,7 @@ static async void DoWork(IServiceProvider services)
         logger.LogInformation(@"Deleted {Target}...", target.FullName);
     }
     await copyPictureService.Copy(source_5, target);
+    await copyPictureService.Copy(source_6, target);
     await copyPictureService.Copy(source_1, target);
     await copyPictureService.Copy(source_4, target);
     await copyPictureService.Copy(source_3, target);
@@ -81,7 +85,7 @@ static async void DoWork(IServiceProvider services)
     await locationService.ReportMissing(target, "after");
 
     tagService.CreateTags(target);
-    tagService.AddRelevantTags(target);
+    tagService.AddRelevantTagsToFiles(target);
 
     logger.LogInformation("Done...");
 }

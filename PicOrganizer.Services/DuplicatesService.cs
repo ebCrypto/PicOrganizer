@@ -45,7 +45,8 @@ namespace PicOrganizer.Services
                             logger.LogInformation("Duplicates Found. {File1} & {File2} have the same hash", preExistingFile, fileInfo);
                             countDuplicates++;
                             FileInfo keepingFileInfo = MoveDuplicate(preExistingFile, fileInfo, destination);
-                            hashes[hash] = keepingFileInfo;
+                            if ( keepingFileInfo != null)
+                                hashes[hash] = keepingFileInfo;
                         }
                         else
                             hashes.Add(hash, fileInfo);
@@ -58,18 +59,35 @@ namespace PicOrganizer.Services
                                                           
         private FileInfo MoveDuplicate(FileInfo preExistingFile, FileInfo fileInfo, DirectoryInfo destination)
         {
-            if (!destination.Exists)
-                destination.Create();
-            var digitPre = preExistingFile.Name.Count(p => Char.IsDigit(p));
-            var digitfileInfo = preExistingFile.Name.Count(p => Char.IsDigit(p));
-
-            if (digitPre < digitfileInfo)
+            try
             {
-                fileInfo.MoveTo(Path.Combine(destination.FullName , fileInfo.Name));
-                return preExistingFile;
+                if (!destination.Exists)
+                    destination.Create();
+                var digitPre = preExistingFile.Name.Count(p => Char.IsDigit(p));
+                var digitfileInfo = preExistingFile.Name.Count(p => Char.IsDigit(p));
+                string destFileName;
+                if (digitPre < digitfileInfo)
+                {
+                    destFileName = Path.Combine(destination.FullName, fileInfo.Name);
+                    if (File.Exists(destFileName))
+                        fileInfo.Delete();    
+                    else
+                        fileInfo.MoveTo(destFileName);
+                    return preExistingFile;
+                }
+
+                destFileName = Path.Combine(destination.FullName, preExistingFile.Name);
+                if (File.Exists(destFileName))
+                    fileInfo.Delete();
+                else
+                    preExistingFile.MoveTo(destFileName);
+                return fileInfo;
             }
-            preExistingFile.MoveTo(Path.Combine(destination.FullName, preExistingFile.Name));
-            return fileInfo;
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Can't move duplicate {File1}", preExistingFile.FullName);
+                return null;
+            }
         }
 
         private static string ComputeMd5 (FileInfo fi)

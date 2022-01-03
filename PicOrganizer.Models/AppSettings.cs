@@ -32,10 +32,11 @@ namespace PicOrganizer.Models
                 "_yyyyMMdd", 
                 "-yyyyMMdd", 
             };
-            TagSkipper = new[] { "the", "a", "with", "or", "and", "for", "pre", "vzm", "img" };
+            TagSkipper = new[] { "the", "a", "with", "or", "and", "for", "pre", "vzm", "img", "lg", "samsung", "cannon", "dropbox"};
             WhatsappNameRegex = @"IMG-[0-9]{8}-WA[0-9]{4}";
             Scanned = "scanned";
             AllFileExtensions = "*";
+            ExcludedFiles = new[] { "IMG_2915.JPG", "IMG_3676.JPEG", "IMG_3677.JPEG", "IMG_3678.JPEG", "IMG_3679.JPEG", "IMG_3680.JPEG", "IMG_3681.JPEG", };
         }
 
         public string VideosFolderName { get; set; }
@@ -55,6 +56,7 @@ namespace PicOrganizer.Models
         public string Scanned { get; set; }
         public string WhatsappFolderName { get; set;  }
         public string AllFileExtensions { get; set; }
+        public string[] ExcludedFiles { get; }
         public string ReportDetailName { get; set; }
     }
 }

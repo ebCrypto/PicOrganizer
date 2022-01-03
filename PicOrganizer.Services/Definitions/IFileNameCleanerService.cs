@@ -4,5 +4,6 @@
     {
         public string AddParentDirectoryToFileName(FileInfo fileInfo);
         public string CleanName(string input);
+        public void LoadCleanDirList(FileInfo fi);
     }
 }

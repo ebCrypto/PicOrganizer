@@ -19,10 +19,4 @@
     <ProjectReference Include="..\PicOrganizer.Models\PicOrganizer.Models.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="Data\CleanDirectoryName.csv">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

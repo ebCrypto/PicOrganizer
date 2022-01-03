@@ -52,31 +52,37 @@ namespace PicOrganizer.Services
             Parallel.ForEach(words, parallelOptions, item => Tags.Add(item.ToLowerInvariant()));
         }
 
-        public void AddRelevantTags(DirectoryInfo di)
+        public void AddRelevantTagsToFiles(DirectoryInfo di)
         {
             logger.LogInformation("Starting to tag pictures in Directory {Directory}", di.FullName);
             Parallel.ForEach(
                di.GetFilesViaPattern(appSettings.PictureFilter, SearchOption.AllDirectories),
                parallelOptions,
-               async f => await AddRelevantTags(f, di))
+               async f => await AddRelevantTagsToFile(f, di))
                ;
         }
 
-        public async Task AddRelevantTags(FileInfo f, DirectoryInfo rootToIgnore)
+        public async Task AddRelevantTagsToFile(FileInfo f, DirectoryInfo rootToIgnore)
         {
-            var words = MakeWordList(f, rootToIgnore);
-            var relevantTags = Tags.Intersect(words);
-            string tagString = string.Join(";", relevantTags);
-            ImageFile imageFile;
             try
             {
+                if (f.Directory.Name == appSettings.InvalidJpegFolderName)
+                {
+                    logger.LogTrace("Skiping invalid file {File}", f.FullName);
+                    return;
+                }
+                var words = MakeWordList(f, rootToIgnore);
+                var relevantTags = Tags.Intersect(words);
+                string tagString = string.Join(";", relevantTags);
+                ImageFile imageFile;
+
                 imageFile = await ImageFile.FromFileAsync(f.FullName);
                 imageFile.Properties.Set(ExifTag.WindowsKeywords, tagString);
                 await imageFile.SaveAsync(f.FullName);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Unable to add tags {Tags} to file {File}", tagString, f.FullName);
+                logger.LogError(ex, "Unable to add tags to file {File}", f.FullName);
             }
         }
 
