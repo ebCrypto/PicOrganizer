@@ -29,7 +29,7 @@ namespace PicOrganizer.Services
             await Task.WhenAll(topFiles);
             var topLevelReport = topFiles.Select(p => p.Result).ToList() ?? new List<ReportDetail>();
 
-            await reportService.Write(new FileInfo(Path.Combine(di.FullName, step + "_" + appSettings.ReportDetailName)), topLevelReport.OrderBy(p => p.DateTime).ToList());
+            await reportService.Write(new FileInfo(Path.Combine(di.FullName, step + "_" + appSettings.OutputSettings.ReportDetailName)), topLevelReport.OrderBy(p => p.DateTime).ToList());
 
             var filesInSubfolders = di.GetDirectories().Select(d => ReportMissing(d, step)).ToList();
             var subLevelReport = (await Task.WhenAll(filesInSubfolders)).SelectMany(p => p).ToList();
@@ -51,6 +51,8 @@ namespace PicOrganizer.Services
             {
                 FullFileName = fileInfo.FullName,
             };
+            if (fileInfo == null || fileInfo.Directory?.Name == appSettings.OutputSettings.InvalidJpegFolderName)
+                return r;
             try
             {
                 ImageFile imageFile;
@@ -74,11 +76,11 @@ namespace PicOrganizer.Services
                 }
                 catch (NotValidJPEGFileException e)
                 {
-                    logger.LogWarning("{File} is not a valid JPEG {Message}", fileInfo.FullName, e.Message);
+                    logger.LogWarning("{File} invalid JPEG {Message}", fileInfo.FullName, e.Message);
                 }
                 catch (NotValidImageFileException e)
                 {
-                    logger.LogWarning("{File} is not a valid image {Message}", fileInfo.FullName, e.Message);
+                    logger.LogWarning("{File} invalid image {Message}", fileInfo.FullName, e.Message);
                 }
 
             }
@@ -110,7 +112,7 @@ namespace PicOrganizer.Services
             if (lw == LocationWriter.FromClosestSameDay)
             {
                 logger.LogInformation(@"About to WriteLocationFromClosest for pictures in {Source}...", di.FullName);
-                await di.GetFiles(appSettings.ReportDetailName, SearchOption.AllDirectories)
+                await di.GetFiles(appSettings.OutputSettings.ReportDetailName, SearchOption.AllDirectories)
                     .ParallelForEachAsync<FileInfo>(WriteLocationFromClosestKnownIfSameDay, appSettings.MaxDop);
             }
             else
@@ -189,7 +191,7 @@ namespace PicOrganizer.Services
 
         public async Task SaveCoordinatesToImage(double latitude, double longitude, FileInfo fi)
         {
-            if (fi == null || fi.Directory == null || fi.Directory.Name == appSettings.InvalidJpegFolderName)
+            if (fi == null || fi.Directory == null || fi.Directory.Name == appSettings.OutputSettings.InvalidJpegFolderName)
                 return;
             try
             {

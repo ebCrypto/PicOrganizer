@@ -66,7 +66,7 @@ namespace PicOrganizer.Services
         {
             try
             {
-                if (f.Directory.Name == appSettings.InvalidJpegFolderName)
+                if (f.Directory.Name == appSettings.OutputSettings.InvalidJpegFolderName)
                 {
                     logger.LogTrace("Skiping invalid file {File}", f.FullName);
                     return;

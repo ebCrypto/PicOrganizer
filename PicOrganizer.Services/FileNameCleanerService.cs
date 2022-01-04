@@ -19,12 +19,17 @@ namespace PicOrganizer.Services
 
         public void LoadCleanDirList(FileInfo fi)
         {
+            if (!fi.Exists)
+            {
+                logger.LogWarning("Unable to find {File}", fi.FullName);    
+                return;
+            }
             try
             {
                 using var reader = new StreamReader(fi.FullName);
                 using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
                 records = csv.GetRecords<DirectoryReplace>().ToList();
-                logger.LogDebug("Found {Count} entries in CleanDirectoryName.csv", records.Count);
+                logger.LogDebug("Found {Count} entries in {File}", records.Count, fi.Name);
             }
             catch (Exception ex)
             {

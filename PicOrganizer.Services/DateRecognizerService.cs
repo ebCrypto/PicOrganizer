@@ -38,7 +38,7 @@ namespace PicOrganizer.Services
             if (whatsapp != DateTime.MinValue)
                 return whatsapp;
             string noAlphaChar = Regex.Replace(name, "[^0-9_-]", "");            
-            foreach (var dateFormat in appSettings.KnownUsedNameFormats)
+            foreach (var dateFormat in appSettings.KnownUsedDateFormatsInNames)
             {
 
                 DateTime.TryParseExact(noAlphaChar, dateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result);
@@ -46,7 +46,7 @@ namespace PicOrganizer.Services
                     return result;
             }
             noAlphaChar = noAlphaChar.Replace("-", "_");            
-            foreach (var dateFormat in appSettings.KnownUsedNameFormats)
+            foreach (var dateFormat in appSettings.KnownUsedDateFormatsInNames)
             {
                 if (noAlphaChar.Contains('_'))
                 {
@@ -78,7 +78,7 @@ namespace PicOrganizer.Services
                         var value = (List<Dictionary<string, string>>)resolutionValue.Value;
                         _logger.LogTrace("Found {Count} value(s) in this resolution for name {Name}", value.Count, name);
                         DateTime.TryParse(value?[0]?["timex"], out var result);
-                        if (result.Year > appSettings.StartingYearOfLibrary && result < DateTime.Now)
+                        if (result.Year > appSettings.InputSettings.StartingYearOfLibrary && result < DateTime.Now)
                         {
                             _logger.LogInformation("Inferring DateTaken '{Date}' from name {Name}", result.ToString(), name);
                             return result;

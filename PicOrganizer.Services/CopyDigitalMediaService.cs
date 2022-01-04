@@ -43,7 +43,7 @@ namespace PicOrganizer.Services
             {
                 _logger.LogTrace("Processing {File}", fileInfo.FullName);
                 
-                var destination = appSettings.VideosFolderName;
+                var destination = appSettings.OutputSettings.VideosFolderName;
                 DateTime dateInferred = dateRecognizerService.InferDateFromName(fileInfo.Name);
                 if (dateInferred == DateTime.MinValue)
                     dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Name));
@@ -71,14 +71,14 @@ namespace PicOrganizer.Services
         {
             try
             {
-                if ( appSettings.ExcludedFiles.Contains(fileInfo.Name))
+                if ( appSettings.InputSettings.ExcludedFiles.Contains(fileInfo.Name))
                 {
                     _logger.LogInformation("Skipping file {File} because it is part of the exclusion list", fileInfo.FullName);
                     return;
                 }
                 _logger.LogTrace("Processing {File}", fileInfo.FullName);
                 ImageFile imageFile;
-                string destination = appSettings.UnkownFolderName;
+                string destination = appSettings.OutputSettings.UnkownFolderName;
                 DateTime dateTimeOriginal = DateTime.MinValue;
                 DateTime dateInferred = DateTime.MinValue;
                 try
@@ -97,24 +97,24 @@ namespace PicOrganizer.Services
                         dateInferred = dateRecognizerService.InferDateFromName(cleanFolderName);
                     }
 
-                    if (dateInferred == DateTime.MinValue && !cleanFolderName.ToLowerInvariant().Contains(appSettings.Scanned))
+                    if (dateInferred == DateTime.MinValue && !cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned))
                         destination = _directoryNameService.MakeName(dateTimeOriginal);
                     else
                         destination = _directoryNameService.MakeName(dateInferred);
                 }
                 catch (NotValidJPEGFileException)
                 {
-                    destination = appSettings.InvalidJpegFolderName;
+                    destination = appSettings.OutputSettings.InvalidJpegFolderName;
                 }
                 catch (NotValidImageFileException)
                 {
                     _logger.LogDebug("NotValidImageFileException encoutered, assuming {File} is a Video", fileInfo.Name);
-                    destination = appSettings.VideosFolderName;
+                    destination = appSettings.OutputSettings.VideosFolderName;
                 }
 
                 bool sourceWhatsapp = SourceWhatsApp(fileInfo);
                 var targetDirectory = SourceWhatsApp(fileInfo)? 
-                                            new DirectoryInfo(Path.Combine(to.FullName, sourceWhatsapp ? appSettings.WhatsappFolderName : string.Empty, destination)):
+                                            new DirectoryInfo(Path.Combine(to.FullName, sourceWhatsapp ? appSettings.OutputSettings.WhatsappFolderName : string.Empty, destination)):
                                             new DirectoryInfo(Path.Combine(to.FullName, destination));
                 if (!targetDirectory.Exists)
                 {

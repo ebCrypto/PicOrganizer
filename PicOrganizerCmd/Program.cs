@@ -6,6 +6,15 @@ using Serilog.Events;
 using PicOrganizer.Services;
 using PicOrganizer.Models;
 using static PicOrganizer.Services.ILocationService;
+using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+
+var config = new ConfigurationBuilder()
+               .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+               .AddJsonFile("appsettings.json")
+               .AddEnvironmentVariables()
+               .Build();
+var appSettings = config.Get<AppSettings>();
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
@@ -18,7 +27,7 @@ Log.Logger = new LoggerConfiguration()
 using IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((_, services) =>
         services
-            .AddSingleton<AppSettings>()
+            .AddSingleton<AppSettings>(appSettings)
             .AddSingleton<ICopyDigitalMediaService, CopyDigitalMediaService>()
             .AddSingleton<IDirectoryNameService, DirectoryNameService>()
             .AddSingleton<ILocationService, LocationService>()
@@ -50,35 +59,29 @@ static async void DoWork(IServiceProvider services)
     var dirNameService = provider.GetRequiredService<IFileNameCleanerService>();
 
     logger.LogInformation("Starting...");
-    dirNameService.LoadCleanDirList(new FileInfo(@"C:\temp\CleanDirectoryName.csv"));
+    dirNameService.LoadCleanDirList(new FileInfo(appSettings.InputSettings.CleanDirectoryName));
 
-    var root = new DirectoryInfo(@"C:\temp\source");
-    var target = new DirectoryInfo(@"C:\temp\Emmanuel");    
-
-    var source_1 = new DirectoryInfo(Path.Combine(root.FullName,"Flickr"));
-    var source_2 = new DirectoryInfo(Path.Combine(root.FullName, "google-photos"));
-    var source_3 = new DirectoryInfo(Path.Combine(root.FullName, "RebelXti"));
-    var source_4 = new DirectoryInfo(Path.Combine(root.FullName, "samsung-lg"));
-    var source_5 = new DirectoryInfo(Path.Combine(root.FullName, "iPhone"));
-    var source_6 = new DirectoryInfo(Path.Combine(root.FullName, "dropbox"));
-
-    if (target.Exists)
+    var target = new DirectoryInfo(appSettings.OutputSettings.TargetDirectory);
+    if (target.Exists && appSettings.InputSettings.Mode == AppSettings.Mode.AllAndErase)
     {
         target.Delete(true);
         logger.LogInformation(@"Deleted {Target}...", target.FullName);
     }
-    await copyPictureService.Copy(source_5, target);
-    await copyPictureService.Copy(source_6, target);
-    await copyPictureService.Copy(source_1, target);
-    await copyPictureService.Copy(source_4, target);
-    await copyPictureService.Copy(source_3, target);
-    await copyPictureService.Copy(source_2, target);
+    else
+    {
+        logger.LogCritical("{Target} does not exist and {Mode} is set to update", target.FullName, appSettings.InputSettings.Mode);
+        return;
+    }
 
-    await duplicateService.MoveDuplicates(target, new DirectoryInfo(target.FullName + "-" + appSettings.DuplicatesFolderName));
-
+    foreach ( var subFolder in appSettings.InputSettings.Subfolders)
+    {
+        var source = new DirectoryInfo(Path.Combine(appSettings.InputSettings.RootDirectory, subFolder));
+        await copyPictureService.Copy(source, target);
+    }
+    await duplicateService.MoveDuplicates(target, new DirectoryInfo(target.FullName + "-" + appSettings.OutputSettings.DuplicatesFolderName));
     await locationService.ReportMissing(target, "before");
 
-    timelineService.LoadTimeLine(new FileInfo(@"C:\temp\eb-timeline.csv"));
+    timelineService.LoadTimeLine(new FileInfo(appSettings.InputSettings.TimelineName));
     await locationService.WriteLocation(target, LocationWriter.FromClosestSameDay);
     await locationService.WriteLocation(target, LocationWriter.FromTimeline);
 
