@@ -31,6 +31,7 @@
             public string ReportDuplicatesName { get; set; }
             public string ReportDetailName { get; set; }
             public string WhatsappFolderName { get; set; }
+            public string SubFolderDateFormat { get; set; }
         }
 
         public class Inputs
@@ -42,7 +43,7 @@
             public int StartingYearOfLibrary { get; set; }
             public string[] ExcludedFiles { get; set; }
             public string Scanned { get; set; }
-            public Mode Mode { get; set;  }
+            public Mode Mode { get; set; } 
         }
 
         public enum Mode

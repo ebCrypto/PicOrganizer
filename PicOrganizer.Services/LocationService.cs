@@ -13,19 +13,23 @@ namespace PicOrganizer.Services
         private readonly ILogger<LocationService> logger;
         private readonly IReportReadWriteService reportService;
         private readonly ITimelineToFilesService timelineService;
+        private readonly IFileProviderService fileProviderService;
+        private readonly IDateRecognizerService dateRecognizerService;
 
-        public LocationService(AppSettings appSettings, ILogger<LocationService> logger, IReportReadWriteService reportService, ITimelineToFilesService timelineService)
+        public LocationService(AppSettings appSettings, ILogger<LocationService> logger, IReportReadWriteService reportService, ITimelineToFilesService timelineService, IFileProviderService fileProviderService, IDateRecognizerService dateRecognizerService)
         {
             this.appSettings = appSettings;
             this.logger = logger;
             this.reportService = reportService;
             this.timelineService = timelineService;
+            this.fileProviderService = fileProviderService;
+            this.dateRecognizerService = dateRecognizerService;
         }
 
         public async Task<IEnumerable<ReportDetail>> ReportMissing(DirectoryInfo di, string step)
         {
             logger.LogDebug("About to create Location Report in {Directory}", di.FullName);
-            var topFiles = di.GetFilesViaPattern(appSettings.PictureFilter, SearchOption.TopDirectoryOnly).Select(f => GetReportDetail(f)).ToList();
+            var topFiles = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.TopDirectoryOnly).Select(f => GetReportDetail(f)).ToList();
             await Task.WhenAll(topFiles);
             var topLevelReport = topFiles.Select(p => p.Result).ToList() ?? new List<ReportDetail>();
 
@@ -82,7 +86,6 @@ namespace PicOrganizer.Services
                 {
                     logger.LogWarning("{File} invalid image {Message}", fileInfo.FullName, e.Message);
                 }
-
             }
             catch (Exception ex)
             {
@@ -117,7 +120,7 @@ namespace PicOrganizer.Services
             }
             else
             {
-                var topFiles = di.GetFilesViaPattern(appSettings.PictureFilter, SearchOption.AllDirectories);
+                var topFiles = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories);
                 await topFiles.ParallelForEachAsync<FileInfo>(AddlocationFromTimeLine, appSettings.MaxDop);
             }
         }
@@ -125,11 +128,13 @@ namespace PicOrganizer.Services
         {
             try
             {
+                if (fi == null || fi.Directory.Name == appSettings.OutputSettings.InvalidJpegFolderName)
+                    return;
                 var imageFile = await ImageFile.FromFileAsync(fi.FullName);
                 var da = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
                 _ = DateTime.TryParse(da?.ToString(), out var dt);
 
-                if (dt == DateTime.MinValue)
+                if (!dateRecognizerService.Valid(dt))
                     return;
 
                 var result = timelineService.GetTimeline().Where(p => p.Start <= dt && p.End >= dt && !string.IsNullOrEmpty(p.Latitude) && !string.IsNullOrEmpty(p.Longitude));
@@ -151,7 +156,7 @@ namespace PicOrganizer.Services
                 MakeLatitude(c, imageFile);
                 MakeLongitude(c, imageFile);
                 await imageFile.SaveAsync(fi.FullName);
-                logger.LogDebug("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
+                logger.LogTrace("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
             }
             catch (Exception ex)
             {
@@ -200,7 +205,7 @@ namespace PicOrganizer.Services
                 MakeLatitude(c, ef);
                 MakeLongitude(c, ef);
                 await ef.SaveAsync(fi.FullName);
-                logger.LogDebug("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
+                logger.LogTrace("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
             }
             catch (Exception ex)
             {

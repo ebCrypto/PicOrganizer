@@ -10,15 +10,14 @@ namespace PicOrganizer.Services
     {
         private readonly ILogger<TagService> logger;
         private readonly AppSettings appSettings;
-        private readonly IReportReadWriteService reportWriterService;
+        private readonly IFileProviderService fileProviderService;
         ParallelOptions parallelOptions;
 
-        public TagService(ILogger<TagService> logger, AppSettings appSettings, IReportReadWriteService reportWriterService)
+        public TagService(ILogger<TagService> logger, AppSettings appSettings, IFileProviderService fileProviderService)
         {
             this.logger = logger;
             this.appSettings = appSettings;
-            this.reportWriterService = reportWriterService;
-
+            this.fileProviderService = fileProviderService;
             parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = appSettings.MaxDop };
         }
 
@@ -29,7 +28,7 @@ namespace PicOrganizer.Services
             logger.LogInformation("Starting to Create Tag List from pictures in Directory {Directory}", di.FullName); 
             Tags = new ConcurrentBag<string>();
             Parallel.ForEach(
-                di.GetFilesViaPattern(appSettings.PictureFilter, SearchOption.AllDirectories),
+                fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories),
                 parallelOptions,
                 f => AddToTagList(f, di))
                 ;
@@ -37,7 +36,7 @@ namespace PicOrganizer.Services
 
         private List<string> MakeWordList(FileInfo f, DirectoryInfo rootToIgnore)
         {
-            var path = RemoveSpecialCharactersAndNumbers(f.FullName.Substring(rootToIgnore.FullName.Length, f.FullName.Length - rootToIgnore.FullName.Length - f.Extension.Length));
+            var path = AlphaCharAndSpacesOnly(f.FullName.Substring(rootToIgnore.FullName.Length, f.FullName.Length - rootToIgnore.FullName.Length - f.Extension.Length));
             if (path.Contains(" "))
             {
                 var items = path.Split(" ").Select(p => p.ToLowerInvariant()).Where(p => !string.IsNullOrWhiteSpace(p) && p.Length > 2 && !appSettings.TagSkipper.Contains(p));
@@ -56,7 +55,7 @@ namespace PicOrganizer.Services
         {
             logger.LogInformation("Starting to tag pictures in Directory {Directory}", di.FullName);
             Parallel.ForEach(
-               di.GetFilesViaPattern(appSettings.PictureFilter, SearchOption.AllDirectories),
+               fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories),
                parallelOptions,
                async f => await AddRelevantTagsToFile(f, di))
                ;
@@ -79,14 +78,15 @@ namespace PicOrganizer.Services
                 imageFile = await ImageFile.FromFileAsync(f.FullName);
                 imageFile.Properties.Set(ExifTag.WindowsKeywords, tagString);
                 await imageFile.SaveAsync(f.FullName);
+                logger.LogTrace("Added tags {Tags} to file {File}",tagString, f.FullName);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Unable to add tags to file {File}", f.FullName);
+                logger.LogWarning(ex, "Unable to add tags to file {File}", f.FullName);
             }
         }
 
-        private static string RemoveSpecialCharactersAndNumbers(string str)
+        private static string AlphaCharAndSpacesOnly(string str)
         {
             StringBuilder sb = new();
             foreach (char c in str)

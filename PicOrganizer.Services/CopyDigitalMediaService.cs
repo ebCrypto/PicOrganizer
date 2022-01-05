@@ -11,59 +11,60 @@ namespace PicOrganizer.Services
     public class CopyDigitalMediaService : ICopyDigitalMediaService
     {
         private readonly AppSettings appSettings;
-        private readonly ILogger<CopyDigitalMediaService> _logger;
-        private readonly IDirectoryNameService _directoryNameService;
-        private readonly IFileNameCleanerService _fileNameCleanerService;
+        private readonly ILogger<CopyDigitalMediaService> logger;
+        private readonly IFileNameService fileNameService;
         private readonly IDateRecognizerService dateRecognizerService;
+        private readonly IFileProviderService fileProviderService;
 
-        public CopyDigitalMediaService(AppSettings appSettings, ILogger<CopyDigitalMediaService> logger, IDirectoryNameService directoryNameService, IFileNameCleanerService fileNameCleanerService, IDateRecognizerService dateRecognizerService)
+        public CopyDigitalMediaService(AppSettings appSettings, ILogger<CopyDigitalMediaService> logger, IFileNameService fileNameService, IDateRecognizerService dateRecognizerService, IFileProviderService fileProviderService)
         {
             this.appSettings = appSettings;
-            _logger = logger;
-            _directoryNameService = directoryNameService;
-            _fileNameCleanerService = fileNameCleanerService;
+            this.logger = logger;
+            this.fileNameService = fileNameService;
             this.dateRecognizerService = dateRecognizerService;
+            this.fileProviderService = fileProviderService;
         }
 
-        public async Task Copy(DirectoryInfo from, DirectoryInfo to)
+        public async Task<IEnumerable<FileInfo>> Copy(DirectoryInfo from, DirectoryInfo to)
         {
-            _logger.LogInformation(@"About to Copy Videos from {Source}...", from.FullName);
-            await from.GetFiles(appSettings.AllFileExtensions, SearchOption.AllDirectories)
-                .Where(p => appSettings.VideoExtensions.Contains(p.Extension.ToLower()))
-                .ParallelForEachAsync<FileInfo, DirectoryInfo>(CopyOneVideo, to, appSettings.MaxDop);
-            _logger.LogInformation(@"About to Copy Pictures from {Source}...", from.FullName);
-            await from.GetFiles(appSettings.AllFileExtensions, SearchOption.AllDirectories)
-                .Where(p => appSettings.PictureExtensions.Contains(p.Extension.ToLower()))
-                .ParallelForEachAsync<FileInfo, DirectoryInfo>(CopyOnePicture, to, appSettings.MaxDop);
+            logger.LogInformation(@"About to Copy Videos from {Source}...", from.FullName);
+            var videos = fileProviderService.GetFiles(from, IFileProviderService.FileType.Video);
+            await videos.ParallelForEachAsync(CopyOneVideo, to, appSettings.MaxDop);
+
+            logger.LogInformation(@"About to Copy Pictures from {Source}...", from.FullName);
+            var pictures = fileProviderService.GetFiles(from, IFileProviderService.FileType.Picture);
+            await pictures.ParallelForEachAsync(CopyOnePicture, to, appSettings.MaxDop);
+
+            return videos.Union(pictures);
         }
 
         private async Task CopyOneVideo(FileInfo fileInfo, DirectoryInfo to)
         {
             try
             {
-                _logger.LogTrace("Processing {File}", fileInfo.FullName);
+                logger.LogTrace("Processing {File}", fileInfo.FullName);
                 
                 var destination = appSettings.OutputSettings.VideosFolderName;
                 DateTime dateInferred = dateRecognizerService.InferDateFromName(fileInfo.Name);
-                if (dateInferred == DateTime.MinValue)
-                    dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Name));
-                if (dateInferred == DateTime.MinValue)
-                    dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Directory?.Name));
-                if (dateInferred != DateTime.MinValue)
-                    destination = Path.Combine(destination,_directoryNameService.MakeName(dateInferred));
+                if (!dateRecognizerService.Valid(dateInferred))
+                    dateInferred = dateRecognizerService.InferDateFromName(fileNameService.CleanName(fileInfo.Name));
+                if(!dateRecognizerService.Valid(dateInferred))
+                    dateInferred = dateRecognizerService.InferDateFromName(fileNameService.CleanName(fileInfo.Directory?.Name));
+                if (!dateRecognizerService.Valid(dateInferred))
+                    destination = Path.Combine(destination, fileNameService.MakeDirectoryName(dateInferred));
 
                 var targetDirectory = new DirectoryInfo(Path.Combine(to.FullName, destination));
                 if (!targetDirectory.Exists)
                 {
                     targetDirectory.Create();
-                    _logger.LogDebug("Created {Directory}", targetDirectory.FullName);
+                    logger.LogDebug("Created {Directory}", targetDirectory.FullName);
                 }
-                string cleanName = _fileNameCleanerService.AddParentDirectoryToFileName(fileInfo);
+                string cleanName = fileNameService.AddParentDirectoryToFileName(fileInfo);
                 fileInfo.CopyTo(Path.Combine(targetDirectory.FullName, cleanName), true);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "{ExceptionMessage} {FileName}", ex.Message, fileInfo.Name);
+                logger.LogError(ex, "{ExceptionMessage} {FileName}", ex.Message, fileInfo.Name);
             }
         }
 
@@ -73,10 +74,10 @@ namespace PicOrganizer.Services
             {
                 if ( appSettings.InputSettings.ExcludedFiles.Contains(fileInfo.Name))
                 {
-                    _logger.LogInformation("Skipping file {File} because it is part of the exclusion list", fileInfo.FullName);
+                    logger.LogInformation("Skipping file {File} because it is part of the exclusion list", fileInfo.FullName);
                     return;
                 }
-                _logger.LogTrace("Processing {File}", fileInfo.FullName);
+                logger.LogTrace("Processing {File}", fileInfo.FullName);
                 ImageFile imageFile;
                 string destination = appSettings.OutputSettings.UnkownFolderName;
                 DateTime dateTimeOriginal = DateTime.MinValue;
@@ -87,20 +88,20 @@ namespace PicOrganizer.Services
                     ExifProperty? tag;
                     tag = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
                     _ = DateTime.TryParse(tag?.ToString(), out dateTimeOriginal);
-                    string cleanFolderName = _fileNameCleanerService.CleanName(fileInfo.Directory?.Name);
-                    if (dateTimeOriginal == DateTime.MinValue)
+                    string cleanFolderName = fileNameService.CleanName(fileInfo.Directory?.Name);
+                    if (!dateRecognizerService.Valid(dateTimeOriginal))
                         dateInferred = dateRecognizerService.InferDateFromName(fileInfo.Name);
-                    if (dateTimeOriginal == DateTime.MinValue && dateInferred == DateTime.MinValue)
-                        dateInferred = dateRecognizerService.InferDateFromName(_fileNameCleanerService.CleanName(fileInfo.Name));
-                    if (dateTimeOriginal == DateTime.MinValue && dateInferred == DateTime.MinValue)
+                    if (!dateRecognizerService.Valid(dateTimeOriginal) && !dateRecognizerService.Valid(dateInferred))
+                        dateInferred = dateRecognizerService.InferDateFromName(fileNameService.CleanName(fileInfo.Name));
+                    if (!dateRecognizerService.Valid(dateTimeOriginal) && !dateRecognizerService.Valid(dateInferred))
                     {
                         dateInferred = dateRecognizerService.InferDateFromName(cleanFolderName);
                     }
 
-                    if (dateInferred == DateTime.MinValue && !cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned))
-                        destination = _directoryNameService.MakeName(dateTimeOriginal);
+                    if (!dateRecognizerService.Valid(dateInferred) && !cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned))
+                        destination = fileNameService.MakeDirectoryName(dateTimeOriginal);
                     else
-                        destination = _directoryNameService.MakeName(dateInferred);
+                        destination = fileNameService.MakeDirectoryName(dateInferred);
                 }
                 catch (NotValidJPEGFileException)
                 {
@@ -108,7 +109,7 @@ namespace PicOrganizer.Services
                 }
                 catch (NotValidImageFileException)
                 {
-                    _logger.LogDebug("NotValidImageFileException encoutered, assuming {File} is a Video", fileInfo.Name);
+                    logger.LogDebug("NotValidImageFileException encoutered, assuming {File} is a Video", fileInfo.Name);
                     destination = appSettings.OutputSettings.VideosFolderName;
                 }
 
@@ -119,34 +120,34 @@ namespace PicOrganizer.Services
                 if (!targetDirectory.Exists)
                 {
                     targetDirectory.Create();
-                    _logger.LogDebug("Created {Directory}", targetDirectory.FullName);
+                    logger.LogDebug("Created {Directory}", targetDirectory.FullName);
                 } // TODO move this to copy?
 
                 await Copy(fileInfo, targetDirectory, dateInferred);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "{ExceptionMessage} {FileName}", ex.Message, fileInfo.Name);
+                logger.LogError(ex, "{ExceptionMessage} {FileName}", ex.Message, fileInfo.Name);
             }
         }
 
         private async Task Copy(FileInfo fileInfo, DirectoryInfo targetDirectory, DateTime dateInferred)
         {
-            string cleanName = _fileNameCleanerService.AddParentDirectoryToFileName(fileInfo);
+            string cleanName = fileNameService.AddParentDirectoryToFileName(fileInfo);
             string destFileName = Path.Combine(targetDirectory.FullName, cleanName);
             fileInfo.CopyTo(destFileName, true);
-            if (dateInferred != DateTime.MinValue)
+            if (dateRecognizerService.Valid(dateInferred))
             {
                 try
                 {
                     var imageFile = await ImageFile.FromFileAsync(destFileName);
                     imageFile.Properties.Set(ExifTag.DateTimeOriginal, new ExifDateTime(ExifTag.DateTimeOriginal, dateInferred));
                     await imageFile.SaveAsync(destFileName);
-                    _logger.LogDebug("Added date {Date} to file {File}", dateInferred.ToString(), destFileName);
+                    logger.LogDebug("Added date {Date} to file {File}", dateInferred.ToString(), destFileName);
                 }
                 catch (Exception e)
                 {
-                    _logger.LogWarning(e, "Unable to add date {Date} to file {File}", dateInferred.ToString(), destFileName);
+                    logger.LogWarning(e, "Unable to add date {Date} to file {File}", dateInferred.ToString(), destFileName);
                 }
             }
         }

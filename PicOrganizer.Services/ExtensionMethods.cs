@@ -8,27 +8,6 @@ using System.Threading.Tasks;
 
 namespace PicOrganizer.Services
 {
-    public static class DirectoryInfoExtensions
-    {
-        public static List<FileInfo> GetFilesViaPattern(this DirectoryInfo source, string searchPatterns, SearchOption searchOption)
-        {
-            if (string.IsNullOrEmpty(searchPatterns))
-                return new List<FileInfo>();
-            if (searchPatterns.Contains("|"))
-            {
-                string[] searchPattern = searchPatterns.Split('|');
-                List<FileInfo> result = new();
-                for (int i = 0; i < searchPattern.Length; i++)
-                {
-                    result.AddRange(source.GetFilesViaPattern(searchPattern[i], searchOption));
-                }
-                return result;
-            }
-            else
-                return source.GetFiles(searchPatterns, searchOption).ToList();
-        }
-    }
-
     public static class IEnumerableExtensions
     {
         //https://github.com/houseofcat/Tesseract/blob/master/src/HouseofCat.Extensions/IEnumerableExtensions.cs

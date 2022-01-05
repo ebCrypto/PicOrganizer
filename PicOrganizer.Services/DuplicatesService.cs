@@ -1,9 +1,6 @@
-﻿using ExifLibrary;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using PicOrganizer.Models;
 using System.Security.Cryptography;
-using System.Linq;
-using System.Collections.Concurrent;
 
 namespace PicOrganizer.Services
 {
@@ -11,19 +8,20 @@ namespace PicOrganizer.Services
     {
         private readonly AppSettings appSettings;
         private readonly ILogger<DuplicatesService> logger;
-        private readonly IReportReadWriteService reportWriterService;
+        private readonly IFileProviderService fileProviderService;
 
-        public DuplicatesService(AppSettings appSettings, ILogger<DuplicatesService> logger, IReportReadWriteService reportWriterService)
+        public DuplicatesService(AppSettings appSettings, ILogger<DuplicatesService> logger, IFileProviderService fileProviderService)
         {
             this.appSettings = appSettings;
             this.logger = logger;
-            this.reportWriterService = reportWriterService;
+            this.fileProviderService = fileProviderService;
         }
 
         public async Task MoveDuplicates(DirectoryInfo di, DirectoryInfo destination)
         {
             logger.LogDebug("About to look for duplicates in {Directory}", di.FullName);
-            var topFilesLength = di.GetFilesViaPattern(appSettings.AllFileExtensions, SearchOption.TopDirectoryOnly).Select(f => new { f.Length, f.FullName }).ToList();
+            var fileInfos = fileProviderService.GetFilesViaPattern(di,appSettings.AllFileExtensions, SearchOption.TopDirectoryOnly);
+            var topFilesLength = fileInfos.Select(f => new { f.Length, f.FullName }).ToList();
             int countDuplicates = 0;
             if (topFilesLength.Any())
             {

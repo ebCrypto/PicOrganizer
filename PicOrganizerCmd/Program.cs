@@ -6,8 +6,8 @@ using Serilog.Events;
 using PicOrganizer.Services;
 using PicOrganizer.Models;
 using static PicOrganizer.Services.ILocationService;
-using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 
 var config = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
@@ -29,13 +29,13 @@ using IHost host = Host.CreateDefaultBuilder(args)
         services
             .AddSingleton<AppSettings>(appSettings)
             .AddSingleton<ICopyDigitalMediaService, CopyDigitalMediaService>()
-            .AddSingleton<IDirectoryNameService, DirectoryNameService>()
             .AddSingleton<ILocationService, LocationService>()
             .AddSingleton<IDuplicatesService, DuplicatesService>()
             .AddSingleton<IReportReadWriteService, CsvReadWriteService>()
-            .AddSingleton<IFileNameCleanerService, FileNameCleanerService>()
+            .AddSingleton<IFileNameService, FileNameService>()
             .AddSingleton<ITimelineToFilesService, TimelineToFilesService>()
             .AddSingleton<IDateRecognizerService, DateRecognizerService>()
+            .AddSingleton<IFileProviderService, FileProviderService>()
             .AddSingleton<ITagService, TagService>()
             )
     .UseSerilog()
@@ -56,7 +56,8 @@ static async void DoWork(IServiceProvider services)
     var timelineService = provider.GetRequiredService<ITimelineToFilesService>();
     var appSettings = provider.GetRequiredService<AppSettings>();
     var tagService = provider.GetRequiredService<ITagService>();
-    var dirNameService = provider.GetRequiredService<IFileNameCleanerService>();
+    var dirNameService = provider.GetRequiredService<IFileNameService>();
+    var fileProviderService = provider.GetRequiredService<IFileProviderService>();
 
     logger.LogInformation("Starting...");
     dirNameService.LoadCleanDirList(new FileInfo(appSettings.InputSettings.CleanDirectoryName));
@@ -67,25 +68,33 @@ static async void DoWork(IServiceProvider services)
         target.Delete(true);
         logger.LogInformation(@"Deleted {Target}...", target.FullName);
     }
-    else
+    else if (appSettings.InputSettings.Mode == AppSettings.Mode.FindDeltasAndAdd)
     {
         logger.LogCritical("{Target} does not exist and {Mode} is set to update", target.FullName, appSettings.InputSettings.Mode);
         return;
+    }
+    if (appSettings.InputSettings.Mode == AppSettings.Mode.FindDeltasAndAdd)
+    {
+        fileProviderService.SetExcept(null); //TODO complete this
     }
 
     foreach ( var subFolder in appSettings.InputSettings.Subfolders)
     {
         var source = new DirectoryInfo(Path.Combine(appSettings.InputSettings.RootDirectory, subFolder));
-        await copyPictureService.Copy(source, target);
+        var files = await copyPictureService.Copy(source, target);
+        var f = JsonSerializer.Serialize(files.Select(p=>new { p.FullName, p.Name, p.Length, p.LastWriteTimeUtc, p.Extension }));
+        var directory = new DirectoryInfo(target.FullName + "-" + "metaData");
+        Directory.CreateDirectory(directory.FullName);
+        File.WriteAllText(Path.Combine(directory.FullName, subFolder + ".json"), f );
     }
     await duplicateService.MoveDuplicates(target, new DirectoryInfo(target.FullName + "-" + appSettings.OutputSettings.DuplicatesFolderName));
-    await locationService.ReportMissing(target, "before");
+    //await locationService.ReportMissing(target, "before");
 
     timelineService.LoadTimeLine(new FileInfo(appSettings.InputSettings.TimelineName));
     await locationService.WriteLocation(target, LocationWriter.FromClosestSameDay);
     await locationService.WriteLocation(target, LocationWriter.FromTimeline);
 
-    await locationService.ReportMissing(target, "after");
+    //await locationService.ReportMissing(target, "after");
 
     tagService.CreateTags(target);
     tagService.AddRelevantTagsToFiles(target);

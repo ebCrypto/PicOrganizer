@@ -5,16 +5,21 @@ using System.Globalization;
 
 namespace PicOrganizer.Services
 {
-    public class FileNameCleanerService : IFileNameCleanerService
+    public class FileNameService : IFileNameService
     {
         private readonly AppSettings appSettings;
-        private readonly ILogger<FileNameCleanerService> logger;
+        private readonly ILogger<FileNameService> logger;
         List<DirectoryReplace> records;
 
-        public FileNameCleanerService(AppSettings appSettings, ILogger<FileNameCleanerService> logger)
+        public FileNameService(AppSettings appSettings, ILogger<FileNameService> logger)
         {
             this.appSettings = appSettings;
             this.logger = logger;
+        }
+
+        public string MakeDirectoryName(DateTime dt)
+        {
+            return dt.ToString(appSettings.OutputSettings.SubFolderDateFormat);
         }
 
         public void LoadCleanDirList(FileInfo fi)
@@ -38,14 +43,23 @@ namespace PicOrganizer.Services
         }
 
         public string CleanName(string input)
-        {
-            var output = input;
+        { 
+
+            var extension = Path.GetExtension(input);
+            var output = string.IsNullOrEmpty(extension) ? input : input[..^extension.Length];
+
+            if (Guid.TryParse(output, out var resultGuid))
+            {
+                logger.LogDebug("Found Guid in {File}", output);
+                output = Math.Abs(output.GetHashCode()).ToString();
+            }
+            else
             if (records != null && records.Any() && !string.IsNullOrEmpty(input))
             {
                 foreach (var record in records)
                     output = output.Replace(record.Original, record.ReplaceWith);
             }
-            return output;
+            return output + extension;
         }
 
         public string AddParentDirectoryToFileName(FileInfo fileInfo)
@@ -54,16 +68,11 @@ namespace PicOrganizer.Services
                 return String.Empty;
             try
             {
-                string directoryName = CleanName(fileInfo.Directory?.Name);
-                if (directoryName.Length > 0)
-                    directoryName += " ";
-                var fileName = fileInfo.Name;
-                if (Guid.TryParse(fileName[^(fileInfo.Extension.Length)].ToString(), out var resultGuid))
-                {
-                    logger.LogDebug("Found Guid {File}", fileName);
-                    fileName = Math.Abs(fileName.GetHashCode()) + fileInfo.Extension;
-                }
-                string result = string.Format($"{directoryName}{fileName}").Replace("__", "_");
+                string cleanFolderName = CleanName(fileInfo.Directory?.Name);
+                if (cleanFolderName.Length > 0)
+                    cleanFolderName += " ";
+                var cleanFileName = CleanName(fileInfo.Name);
+                string result = string.Format($"{cleanFolderName}{cleanFileName}").Replace("__", "_");
                 if (result.StartsWith("_"))
                     result = result.Substring(1);
                 return result;
