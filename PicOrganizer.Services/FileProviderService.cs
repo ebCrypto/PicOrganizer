@@ -8,20 +8,30 @@ namespace PicOrganizer.Services
     {
         private readonly AppSettings appSettings;
         private readonly ILogger<FileProviderService> logger;
-        private readonly IRunDataService runDataService;
+        private List<string> except;
 
-        public FileProviderService(AppSettings appSettings, ILogger<FileProviderService> logger, IRunDataService runDataService)
+        public FileProviderService(AppSettings appSettings, ILogger<FileProviderService> logger)
         {
             this.appSettings = appSettings;
             this.logger = logger;
-            this.runDataService = runDataService;
+            except = new List<string>();
+        }
+
+        public IEnumerable<string> GetExceptionList()
+        {
+            return except;
+        }
+
+        public void SetExceptionList(List<string> except)
+        {
+            this.except = except;
         }
 
         public IEnumerable<FileInfo> GetFiles(DirectoryInfo di, FileType fileType)
         {
             if (di == null)
                 return Enumerable.Empty<FileInfo>();
-            var fileNames = di.GetFiles(appSettings.AllFileExtensions, SearchOption.AllDirectories).Select(p=>p.FullName).Except(runDataService.ExceptionList());
+            var fileNames = di.GetFiles(appSettings.AllFileExtensions, SearchOption.AllDirectories).Select(p=>p.FullName).Except(GetExceptionList());
             var fileInfos = fileNames.Select(p => new FileInfo(p));
             var result = fileType switch
             {
@@ -34,8 +44,6 @@ namespace PicOrganizer.Services
                 FileType.All => fileInfos,
                 _ => Enumerable.Empty<FileInfo>(),
             };
-            //if (appSettings.InputSettings.Mode == AppSettings.Mode.Full)
-            runDataService.Add(result, di, fileType);
             return result;
         }
 
@@ -45,7 +53,7 @@ namespace PicOrganizer.Services
             if (string.IsNullOrEmpty(searchPatterns))
             {
                 var fileInfos = source.GetFiles("*", searchOption);
-                var files = fileInfos.Select(p => p.FullName).Except(runDataService.ExceptionList());
+                var files = fileInfos.Select(p => p.FullName).Except(GetExceptionList());
                 return fileInfos.Where(p=> files.Contains(p.FullName)); 
             }
             if (searchPatterns.Contains('|'))
@@ -59,7 +67,7 @@ namespace PicOrganizer.Services
             else
             {
                 var fileInfos = source.GetFiles(searchPatterns, searchOption);
-                var files = fileInfos.Select(p=>p.FullName).Except(runDataService.ExceptionList());
+                var files = fileInfos.Select(p=>p.FullName).Except(GetExceptionList());
                 return fileInfos.Where(p => files.Contains(p.FullName));
             }
         }

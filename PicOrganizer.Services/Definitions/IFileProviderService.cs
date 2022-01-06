@@ -6,12 +6,15 @@
 
         enum FileType
         {
-            All, 
+            All,
             AllMedia,
             Video,
             Picture
         }
 
         IEnumerable<FileInfo> GetFilesViaPattern(DirectoryInfo source, string searchPatterns, SearchOption searchOption);
+
+        IEnumerable<string> GetExceptionList();
+        void SetExceptionList(List<string> except);
     }
 }

@@ -9,7 +9,6 @@ namespace PicOrganizer.Services
         private readonly ILogger<RunDataService> logger;
         private readonly AppSettings appSettings;
         private readonly IFileProviderService fileProviderService;
-        private List<string> except;
 
         public MetaDataRun metaDataRun { get; set; }
 
@@ -24,7 +23,6 @@ namespace PicOrganizer.Services
                 startTime = DateTimeOffset.Now,
                 Folders = new List<MetaDataFolder>()
             };
-            except = new List<string>();
         }
 
         public async Task ReadFromDisk(DirectoryInfo source)
@@ -38,7 +36,7 @@ namespace PicOrganizer.Services
                     var data = await File.ReadAllTextAsync(metaFile.FullName);
                     metaDataRun = JsonSerializer.Deserialize<MetaDataRun>(data);
                     metaDataRun.Id = Guid.NewGuid();
-                    except = metaDataRun.Folders.SelectMany(p => p.Files.Select(q => q.FullName)).ToList();
+                    fileProviderService.SetExceptionList(metaDataRun.Folders.SelectMany(p => p.Files.Select(q => q.FullName)).ToList());
                 }
                 catch (Exception ex)
                 {
@@ -75,11 +73,6 @@ namespace PicOrganizer.Services
                     }
                 )
             });
-        }
-
-        public IEnumerable<string> ExceptionList()
-        {
-            return except;
-        }
+        } 
     }
 }

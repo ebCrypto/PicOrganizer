@@ -83,7 +83,7 @@ static async void DoWork(IServiceProvider services)
         await copyPictureService.Copy(source, target);
     }
     await duplicateService.MoveDuplicates(target, new DirectoryInfo(target.FullName + appSettings.OutputSettings.DuplicatesFolderSuffix));
-    //await locationService.ReportMissing(target, "before");
+    //await locationService.ReportMissing(target, "before"); 
 
     timelineService.LoadTimeLine(new FileInfo(appSettings.InputSettings.TimelineName));
     await locationService.WriteLocation(target, LocationWriter.FromClosestSameDay);

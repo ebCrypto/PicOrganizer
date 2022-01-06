@@ -13,27 +13,31 @@ namespace PicOrganizer.Services
         private readonly IFileNameService fileNameService;
         private readonly IDateRecognizerService dateRecognizerService;
         private readonly IFileProviderService fileProviderService;
+        private readonly IRunDataService runDataService;
 
-        public CopyDigitalMediaService(AppSettings appSettings, ILogger<CopyDigitalMediaService> logger, IFileNameService fileNameService, IDateRecognizerService dateRecognizerService, IFileProviderService fileProviderService)
+        public CopyDigitalMediaService(AppSettings appSettings, ILogger<CopyDigitalMediaService> logger, IFileNameService fileNameService, IDateRecognizerService dateRecognizerService, IFileProviderService fileProviderService, IRunDataService runDataService)
         {
             this.appSettings = appSettings;
             this.logger = logger;
             this.fileNameService = fileNameService;
             this.dateRecognizerService = dateRecognizerService;
             this.fileProviderService = fileProviderService;
+            this.runDataService = runDataService;
         }
 
         public async Task Copy(DirectoryInfo from, DirectoryInfo to)
         {
-            logger.LogInformation(@"About to Copy Videos from {Source}...", from.FullName);
-            var videos = fileProviderService.GetFiles(from, IFileProviderService.FileType.Video);
-            logger.LogDebug("Found {Count} Video(s) in {From}", videos.Count(), from);
-            await videos.ParallelForEachAsync(CopyOneVideo, to, appSettings.MaxDop);
+            await Copy(from, to, IFileProviderService.FileType.Video);
+            await Copy(from, to, IFileProviderService.FileType.Picture);
+        }
 
-            logger.LogInformation(@"About to Copy Pictures from {Source}...", from.FullName);
-            var pictures = fileProviderService.GetFiles(from, IFileProviderService.FileType.Picture);
-            await pictures.ParallelForEachAsync(CopyOnePicture, to, appSettings.MaxDop);
-            logger.LogDebug("Found {Count} Pictures(s) in {From}", pictures.Count(), from);
+        private async Task Copy(DirectoryInfo from, DirectoryInfo to, IFileProviderService.FileType fileType)
+        {
+            logger.LogInformation("About to Copy {FileType} from {Source}...", fileType, from.FullName);
+            var medias = fileProviderService.GetFiles(from, fileType);
+            logger.LogDebug("Found {Count} {FileType}(s) in {From}", medias.Count(), fileType, from);
+            runDataService.Add(medias, from, fileType);
+            await medias.ParallelForEachAsync(CopyOneVideo, to, appSettings.MaxDop);
         }
 
         private async Task CopyOneVideo(FileInfo fileInfo, DirectoryInfo to)

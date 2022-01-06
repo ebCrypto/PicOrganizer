@@ -118,6 +118,7 @@ namespace PicOrganizer.Services
                 var reportDetails = di.GetFiles(appSettings.OutputSettings.ReportDetailName, SearchOption.AllDirectories);
                 if (reportDetails.Count() == 0)
                     logger.LogWarning("Did not find any files {Name} in {Directory}", appSettings.OutputSettings.ReportDetailName, di.FullName);
+                // TODO seems like this if statement is covering a bug
                 else
                     await reportDetails.ParallelForEachAsync(WriteLocationFromClosestKnownIfSameDay, appSettings.MaxDop);
             }
