@@ -8,27 +8,22 @@ namespace PicOrganizer.Services
     {
         private readonly AppSettings appSettings;
         private readonly ILogger<FileProviderService> logger;
+        private readonly IRunDataService runDataService;
 
-        public FileProviderService(AppSettings appSettings, ILogger<FileProviderService> logger)
+        public FileProviderService(AppSettings appSettings, ILogger<FileProviderService> logger, IRunDataService runDataService)
         {
             this.appSettings = appSettings;
             this.logger = logger;
-        }
-
-        private IEnumerable<FileInfo> except;
-
-        public void SetExcept (IEnumerable<FileInfo> except)
-        {
-            logger.LogInformation("Adding {Count} files to the exception list", except?.Count());
-            this.except = except;
+            this.runDataService = runDataService;
         }
 
         public IEnumerable<FileInfo> GetFiles(DirectoryInfo di, FileType fileType)
         {
             if (di == null)
                 return Enumerable.Empty<FileInfo>();
-            var fileInfos = di.GetFiles(appSettings.AllFileExtensions, SearchOption.AllDirectories).Except(except);
-            return fileType switch
+            var fileNames = di.GetFiles(appSettings.AllFileExtensions, SearchOption.AllDirectories).Select(p=>p.FullName).Except(runDataService.ExceptionList());
+            var fileInfos = fileNames.Select(p => new FileInfo(p));
+            var result = fileType switch
             {
                 FileType.Video => fileInfos
                                         .Where(p => appSettings.VideoExtensions.Contains(p.Extension.ToLower())),
@@ -39,12 +34,20 @@ namespace PicOrganizer.Services
                 FileType.All => fileInfos,
                 _ => Enumerable.Empty<FileInfo>(),
             };
+            //if (appSettings.InputSettings.Mode == AppSettings.Mode.Full)
+            runDataService.Add(result, di, fileType);
+            return result;
         }
 
         public IEnumerable<FileInfo> GetFilesViaPattern(DirectoryInfo source, string searchPatterns, SearchOption searchOption)
         {
+            logger.LogTrace("Looking for FileInfos in {Source}, using the SearchPattern {SearchPattern} and SearchOption {SearchOption}", source.FullName, searchPatterns, searchOption);
             if (string.IsNullOrEmpty(searchPatterns))
-                return source.GetFiles("*",searchOption).Except(except);
+            {
+                var fileInfos = source.GetFiles("*", searchOption);
+                var files = fileInfos.Select(p => p.FullName).Except(runDataService.ExceptionList());
+                return fileInfos.Where(p=> files.Contains(p.FullName)); 
+            }
             if (searchPatterns.Contains('|'))
             {
                 string[] searchPattern = searchPatterns.Split('|');
@@ -54,7 +57,11 @@ namespace PicOrganizer.Services
                 return result;
             }
             else
-                return source.GetFiles(searchPatterns, searchOption).Except(except);
+            {
+                var fileInfos = source.GetFiles(searchPatterns, searchOption);
+                var files = fileInfos.Select(p=>p.FullName).Except(runDataService.ExceptionList());
+                return fileInfos.Where(p => files.Contains(p.FullName));
+            }
         }
     }
 }

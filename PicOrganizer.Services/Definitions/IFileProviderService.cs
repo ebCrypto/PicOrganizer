@@ -4,7 +4,7 @@
     {
         IEnumerable<FileInfo> GetFiles(DirectoryInfo di, FileType fileType);
 
-        public enum FileType
+        enum FileType
         {
             All, 
             AllMedia,
@@ -13,6 +13,5 @@
         }
 
         IEnumerable<FileInfo> GetFilesViaPattern(DirectoryInfo source, string searchPatterns, SearchOption searchOption);
-        public void SetExcept(IEnumerable<FileInfo> except);
     }
 }

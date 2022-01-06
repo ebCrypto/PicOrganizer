@@ -2,9 +2,9 @@
 {
     public interface IFileNameService
     {
-        public string AddParentDirectoryToFileName(FileInfo fileInfo);
-        public string CleanName(string input);
-        public void LoadCleanDirList(FileInfo fi);
+        string AddParentDirectoryToFileName(FileInfo fileInfo);
+        string CleanName(string input);
+        void LoadCleanDirList(FileInfo fi);
         string MakeDirectoryName(DateTime dt);
     }
 }

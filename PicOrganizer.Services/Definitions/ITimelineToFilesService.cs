@@ -4,8 +4,7 @@ namespace PicOrganizer.Services
 {
     public interface ITimelineToFilesService
     {
-
-        public void LoadTimeLine(FileInfo csv);
+        void LoadTimeLine(FileInfo csv);
         List<ReportMissingLocation> GetTimeline();
     }
 }

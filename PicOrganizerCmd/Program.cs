@@ -36,6 +36,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
             .AddSingleton<ITimelineToFilesService, TimelineToFilesService>()
             .AddSingleton<IDateRecognizerService, DateRecognizerService>()
             .AddSingleton<IFileProviderService, FileProviderService>()
+            .AddSingleton<IRunDataService, RunDataService>()
             .AddSingleton<ITagService, TagService>()
             )
     .UseSerilog()
@@ -58,36 +59,30 @@ static async void DoWork(IServiceProvider services)
     var tagService = provider.GetRequiredService<ITagService>();
     var dirNameService = provider.GetRequiredService<IFileNameService>();
     var fileProviderService = provider.GetRequiredService<IFileProviderService>();
+    var runDataService = provider.GetRequiredService<IRunDataService>();
 
     logger.LogInformation("Starting...");
     dirNameService.LoadCleanDirList(new FileInfo(appSettings.InputSettings.CleanDirectoryName));
 
     var target = new DirectoryInfo(appSettings.OutputSettings.TargetDirectory);
-    if (target.Exists && appSettings.InputSettings.Mode == AppSettings.Mode.AllAndErase)
+    if (target.Exists && appSettings.InputSettings.Mode == AppSettings.Mode.Full)
     {
         target.Delete(true);
         logger.LogInformation(@"Deleted {Target}...", target.FullName);
     }
-    else if (appSettings.InputSettings.Mode == AppSettings.Mode.FindDeltasAndAdd)
+    if (appSettings.InputSettings.Mode == AppSettings.Mode.DeltasOnly)
     {
-        logger.LogCritical("{Target} does not exist and {Mode} is set to update", target.FullName, appSettings.InputSettings.Mode);
-        return;
-    }
-    if (appSettings.InputSettings.Mode == AppSettings.Mode.FindDeltasAndAdd)
-    {
-        fileProviderService.SetExcept(null); //TODO complete this
+        var metaFolder = new DirectoryInfo(target.FullName + appSettings.OutputSettings.MetaDataFolderSuffix);
+        logger.LogInformation(@"Delta mode... looking for meta data in {Target}...", metaFolder.FullName);
+        await runDataService.ReadFromDisk(metaFolder);
     }
 
     foreach ( var subFolder in appSettings.InputSettings.Subfolders)
     {
         var source = new DirectoryInfo(Path.Combine(appSettings.InputSettings.RootDirectory, subFolder));
-        var files = await copyPictureService.Copy(source, target);
-        var f = JsonSerializer.Serialize(files.Select(p=>new { p.FullName, p.Name, p.Length, p.LastWriteTimeUtc, p.Extension }));
-        var directory = new DirectoryInfo(target.FullName + "-" + "metaData");
-        Directory.CreateDirectory(directory.FullName);
-        File.WriteAllText(Path.Combine(directory.FullName, subFolder + ".json"), f );
+        await copyPictureService.Copy(source, target);
     }
-    await duplicateService.MoveDuplicates(target, new DirectoryInfo(target.FullName + "-" + appSettings.OutputSettings.DuplicatesFolderName));
+    await duplicateService.MoveDuplicates(target, new DirectoryInfo(target.FullName + appSettings.OutputSettings.DuplicatesFolderSuffix));
     //await locationService.ReportMissing(target, "before");
 
     timelineService.LoadTimeLine(new FileInfo(appSettings.InputSettings.TimelineName));
@@ -99,5 +94,6 @@ static async void DoWork(IServiceProvider services)
     tagService.CreateTags(target);
     tagService.AddRelevantTagsToFiles(target);
 
+    runDataService.WriteToDisk(target);
     logger.LogInformation("Done...");
 }

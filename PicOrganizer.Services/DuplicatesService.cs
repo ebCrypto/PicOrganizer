@@ -51,7 +51,7 @@ namespace PicOrganizer.Services
                     }
                 }
             }
-            logger.LogInformation("Looped through {TotalCount} and found {DuplicateCount} duplicates", topFilesLength.Count, countDuplicates);
+            logger.LogInformation("Looped through {TotalCount} files and found {DuplicateCount} duplicates", topFilesLength.Count, countDuplicates);
             await di.GetDirectories().ToList().ParallelForEachAsync<DirectoryInfo, DirectoryInfo>(MoveDuplicates, destination, appSettings.MaxDop);
         }
                                                           
@@ -76,7 +76,7 @@ namespace PicOrganizer.Services
 
                 destFileName = Path.Combine(destination.FullName, preExistingFile.Name);
                 if (File.Exists(destFileName))
-                    fileInfo.Delete();
+                    preExistingFile.Delete();
                 else
                     preExistingFile.MoveTo(destFileName);
                 return fileInfo;

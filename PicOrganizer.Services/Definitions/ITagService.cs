@@ -2,8 +2,8 @@
 {
     public interface ITagService
     {
-        public void CreateTags(DirectoryInfo di);
+        void CreateTags(DirectoryInfo di);
         
-        public void AddRelevantTagsToFiles(DirectoryInfo di);
+        void AddRelevantTagsToFiles(DirectoryInfo di);
     }
 }

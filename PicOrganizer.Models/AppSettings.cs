@@ -25,7 +25,8 @@
         {
             public string TargetDirectory { get; set; }
             public string VideosFolderName { get; set; }
-            public string DuplicatesFolderName { get; set; }
+            public string DuplicatesFolderSuffix { get; set; }
+            public string MetaDataFolderSuffix { get; set ; }
             public string InvalidJpegFolderName { get; set; }
             public string UnkownFolderName { get; set; }
             public string ReportDuplicatesName { get; set; }
@@ -48,8 +49,8 @@
 
         public enum Mode
         {
-            AllAndErase = 0,
-            FindDeltasAndAdd = 1
+            Full = 0,
+            DeltasOnly = 1
         }
     }
 }

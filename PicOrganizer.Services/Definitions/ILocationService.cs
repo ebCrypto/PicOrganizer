@@ -8,12 +8,12 @@ namespace PicOrganizer.Services
     {
         Task<IEnumerable<ReportDetail>> ReportMissing(DirectoryInfo di, string step);
         Task WriteLocation(DirectoryInfo di, LocationWriter lw);
-        public Task SaveDoubleCoordinatesToImage(string latitude, string longitude, FileInfo fi);
-        public Task SaveDMSCoordinatesToImage(string latitude, string longitude, FileInfo fi);
-        public void MakeLongitude(Coordinate coordinate, ImageFile ef);
-        public void MakeLatitude(Coordinate coordinate, ImageFile ef);
+        Task SaveDoubleCoordinatesToImage(string latitude, string longitude, FileInfo fi);
+        Task SaveDMSCoordinatesToImage(string latitude, string longitude, FileInfo fi);
+        void MakeLongitude(Coordinate coordinate, ImageFile ef);
+        void MakeLatitude(Coordinate coordinate, ImageFile ef);
 
-        public enum LocationWriter
+        enum LocationWriter
         {
             FromClosestSameDay = 1, // TODO binary mask and break into 2 options?
             FromTimeline = 2

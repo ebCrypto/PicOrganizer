@@ -115,12 +115,16 @@ namespace PicOrganizer.Services
             if (lw == LocationWriter.FromClosestSameDay)
             {
                 logger.LogInformation(@"About to WriteLocationFromClosest for pictures in {Source}...", di.FullName);
-                await di.GetFiles(appSettings.OutputSettings.ReportDetailName, SearchOption.AllDirectories)
-                    .ParallelForEachAsync<FileInfo>(WriteLocationFromClosestKnownIfSameDay, appSettings.MaxDop);
+                var reportDetails = di.GetFiles(appSettings.OutputSettings.ReportDetailName, SearchOption.AllDirectories);
+                if (reportDetails.Count() == 0)
+                    logger.LogWarning("Did not find any files {Name} in {Directory}", appSettings.OutputSettings.ReportDetailName, di.FullName);
+                else
+                    await reportDetails.ParallelForEachAsync(WriteLocationFromClosestKnownIfSameDay, appSettings.MaxDop);
             }
             else
             {
                 var topFiles = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories);
+                logger.LogDebug("Found {Count} files to add location from timeline to", topFiles.Count());
                 await topFiles.ParallelForEachAsync<FileInfo>(AddlocationFromTimeLine, appSettings.MaxDop);
             }
         }
@@ -148,10 +152,10 @@ namespace PicOrganizer.Services
                     logger.LogWarning("Multiple locations ({Count}) found on {Date} using the provided timeline", result.Count(), dt.ToString());
                     return;
                 }
-                var firestResult = result.First();
+                var first = result.First();
 
-                var latitude = firestResult.Latitude;
-                var longitude = firestResult.Longitude;
+                var latitude = first.Latitude;
+                var longitude = first.Longitude;
                 var c = new Coordinate(Convert.ToDouble(latitude), Convert.ToDouble(longitude), DateTime.Today);
                 MakeLatitude(c, imageFile);
                 MakeLongitude(c, imageFile);

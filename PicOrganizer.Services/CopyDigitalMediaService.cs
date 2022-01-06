@@ -1,8 +1,6 @@
 ﻿using ExifLibrary;
 using System.Linq;
 using Microsoft.Extensions.Logging;
-using Microsoft.Recognizers.Text;
-using Microsoft.Recognizers.Text.DateTime;
 using PicOrganizer.Models;
 using System.Text.RegularExpressions;
 
@@ -25,17 +23,17 @@ namespace PicOrganizer.Services
             this.fileProviderService = fileProviderService;
         }
 
-        public async Task<IEnumerable<FileInfo>> Copy(DirectoryInfo from, DirectoryInfo to)
+        public async Task Copy(DirectoryInfo from, DirectoryInfo to)
         {
             logger.LogInformation(@"About to Copy Videos from {Source}...", from.FullName);
             var videos = fileProviderService.GetFiles(from, IFileProviderService.FileType.Video);
+            logger.LogDebug("Found {Count} Video(s) in {From}", videos.Count(), from);
             await videos.ParallelForEachAsync(CopyOneVideo, to, appSettings.MaxDop);
 
             logger.LogInformation(@"About to Copy Pictures from {Source}...", from.FullName);
             var pictures = fileProviderService.GetFiles(from, IFileProviderService.FileType.Picture);
             await pictures.ParallelForEachAsync(CopyOnePicture, to, appSettings.MaxDop);
-
-            return videos.Union(pictures);
+            logger.LogDebug("Found {Count} Pictures(s) in {From}", pictures.Count(), from);
         }
 
         private async Task CopyOneVideo(FileInfo fileInfo, DirectoryInfo to)
@@ -89,19 +87,14 @@ namespace PicOrganizer.Services
                     tag = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
                     _ = DateTime.TryParse(tag?.ToString(), out dateTimeOriginal);
                     string cleanFolderName = fileNameService.CleanName(fileInfo.Directory?.Name);
-                    if (!dateRecognizerService.Valid(dateTimeOriginal))
+                    if (!dateRecognizerService.Valid(dateTimeOriginal) || cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned))
                         dateInferred = dateRecognizerService.InferDateFromName(fileInfo.Name);
-                    if (!dateRecognizerService.Valid(dateTimeOriginal) && !dateRecognizerService.Valid(dateInferred))
+                    if ((!dateRecognizerService.Valid(dateTimeOriginal) || cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned)) && !dateRecognizerService.Valid(dateInferred))
                         dateInferred = dateRecognizerService.InferDateFromName(fileNameService.CleanName(fileInfo.Name));
-                    if (!dateRecognizerService.Valid(dateTimeOriginal) && !dateRecognizerService.Valid(dateInferred))
-                    {
+                    if ((!dateRecognizerService.Valid(dateTimeOriginal) || cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned)) && !dateRecognizerService.Valid(dateInferred))
                         dateInferred = dateRecognizerService.InferDateFromName(cleanFolderName);
-                    }
-
-                    if (!dateRecognizerService.Valid(dateInferred) && !cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned))
-                        destination = fileNameService.MakeDirectoryName(dateTimeOriginal);
-                    else
-                        destination = fileNameService.MakeDirectoryName(dateInferred);
+                    
+                    destination = fileNameService.MakeDirectoryName(!dateRecognizerService.Valid(dateInferred)? dateTimeOriginal: dateInferred);
                 }
                 catch (NotValidJPEGFileException)
                 {
@@ -109,7 +102,7 @@ namespace PicOrganizer.Services
                 }
                 catch (NotValidImageFileException)
                 {
-                    logger.LogDebug("NotValidImageFileException encoutered, assuming {File} is a Video", fileInfo.Name);
+                    logger.LogWarning("NotValidImageFileException encoutered, assuming {File} is a Video", fileInfo.Name);
                     destination = appSettings.OutputSettings.VideosFolderName;
                 }
 
