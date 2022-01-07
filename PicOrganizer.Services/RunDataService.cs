@@ -36,7 +36,9 @@ namespace PicOrganizer.Services
                     var data = await File.ReadAllTextAsync(metaFile.FullName);
                     metaDataRun = JsonSerializer.Deserialize<MetaDataRun>(data);
                     metaDataRun.Id = Guid.NewGuid();
+                    metaDataRun.startTime = DateTimeOffset.Now;
                     fileProviderService.SetExceptionList(metaDataRun.Folders.SelectMany(p => p.Files.Select(q => q.FullName)).ToList());
+                    logger.LogInformation("using meta found in {File}", metaFile.FullName);
                 }
                 catch (Exception ex)
                 {
@@ -51,7 +53,7 @@ namespace PicOrganizer.Services
             var filesInTarget = fileProviderService.GetFiles(target, IFileProviderService.FileType.AllMedia);
             Add(filesInTarget, target, IFileProviderService.FileType.AllMedia);  
             metaDataRun.endTime = DateTimeOffset.Now;
-            string path = Path.Combine(directory.FullName, metaDataRun.Id + ".json");
+            string path = Path.Combine(directory.FullName, metaDataRun.endTime.ToString("yyyy-MM-dd_HH-mm-ss-fff") + ".json");
             File.WriteAllText(path, JsonSerializer.Serialize(metaDataRun));
             logger.LogInformation("Saved Meta {File}", path);
         }

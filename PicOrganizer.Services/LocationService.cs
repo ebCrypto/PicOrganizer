@@ -2,6 +2,7 @@
 using ExifLibrary;
 using Microsoft.Extensions.Logging;
 using PicOrganizer.Models;
+using System.Collections.Concurrent;
 using System.Linq;
 using static PicOrganizer.Services.ILocationService;
 
@@ -15,6 +16,8 @@ namespace PicOrganizer.Services
         private readonly ITimelineToFilesService timelineService;
         private readonly IFileProviderService fileProviderService;
         private readonly IDateRecognizerService dateRecognizerService;
+        private readonly ParallelOptions parallelOptions;
+        private ConcurrentDictionary<string, List<ReportDetail>> lastLocationDetailRun;
 
         public LocationService(AppSettings appSettings, ILogger<LocationService> logger, IReportReadWriteService reportService, ITimelineToFilesService timelineService, IFileProviderService fileProviderService, IDateRecognizerService dateRecognizerService)
         {
@@ -24,22 +27,29 @@ namespace PicOrganizer.Services
             this.timelineService = timelineService;
             this.fileProviderService = fileProviderService;
             this.dateRecognizerService = dateRecognizerService;
+            this.parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = appSettings.MaxDop };
         }
 
-        public async Task<IEnumerable<ReportDetail>> ReportMissing(DirectoryInfo di, string step)
+        public async Task<IEnumerable<ReportDetail>> ReportMissing(DirectoryInfo di, string step, bool writeToDisk = true)
         {
+            if (di.FullName == appSettings.OutputSettings.TargetDirectory)
+                lastLocationDetailRun = new ConcurrentDictionary<string, List<ReportDetail>>();
+
             logger.LogDebug("About to create Location Report in {Directory}", di.FullName);
             var topFiles = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.TopDirectoryOnly).Select(f => GetReportDetail(f)).ToList();
             await Task.WhenAll(topFiles);
-            var topLevelReport = topFiles.Select(p => p.Result).ToList() ?? new List<ReportDetail>();
+            List<ReportDetail> topLevelReport = topFiles.Select(p => p.Result).ToList() ?? new List<ReportDetail>();
+            if (topLevelReport.Any())
+                lastLocationDetailRun.AddOrUpdate(di.FullName, topLevelReport, (k,v)=> v);
+            if(writeToDisk)
+                await reportService.Write(new FileInfo(Path.Combine(di.FullName, step + "_" + appSettings.OutputSettings.ReportDetailName)), topLevelReport.OrderBy(p => p.DateTime).ToList());
 
-            await reportService.Write(new FileInfo(Path.Combine(di.FullName, step + "_" + appSettings.OutputSettings.ReportDetailName)), topLevelReport.OrderBy(p => p.DateTime).ToList());
-
-            var filesInSubfolders = di.GetDirectories().Select(d => ReportMissing(d, step)).ToList();
+            var filesInSubfolders = di.GetDirectories().Select(d => ReportMissing(d, step,writeToDisk)).ToList();
             var subLevelReport = (await Task.WhenAll(filesInSubfolders)).SelectMany(p => p).ToList();
             var comboReport = topLevelReport.Union(subLevelReport);
 
-            await reportService.Write(new FileInfo(Path.Combine(di.FullName, step + "_reportMissingLocations.csv")), ComputeMissingLocations(comboReport));
+            if (writeToDisk)
+                await reportService.Write(new FileInfo(Path.Combine(di.FullName, step + "_reportMissingLocations.csv")), ComputeMissingLocations(comboReport));
             return comboReport;
         }
 
@@ -103,30 +113,29 @@ namespace PicOrganizer.Services
             return false;
         }
 
-        private async Task WriteLocationFromClosestKnownIfSameDay(FileInfo fi)
-        {
-            logger.LogInformation(@"About to WriteLocationFromClosest for pictures listed in {Source}...", fi.FullName);
-            var report = await reportService.Read<ReportDetail>(fi);
-            await WriteLocationFromClosestKnownIfSameDay(report);
-        }
-
         public async Task WriteLocation(DirectoryInfo di, LocationWriter lw)
         {
+            logger.LogInformation(@"About to Write Location {Type} for pictures in {Source}...",lw, di.FullName);
             if (lw == LocationWriter.FromClosestSameDay)
             {
-                logger.LogInformation(@"About to WriteLocationFromClosest for pictures in {Source}...", di.FullName);
-                var reportDetails = di.GetFiles(appSettings.OutputSettings.ReportDetailName, SearchOption.AllDirectories);
-                if (reportDetails.Count() == 0)
-                    logger.LogWarning("Did not find any files {Name} in {Directory}", appSettings.OutputSettings.ReportDetailName, di.FullName);
-                // TODO seems like this if statement is covering a bug
+                if (lastLocationDetailRun == null)
+                {
+                    logger.LogInformation("Creating data necessary to process missing locations. This might take a while... ");
+                    await ReportMissing(di, string.Empty, false);
+                }
+
+                if (lastLocationDetailRun != null)
+                {
+                    Parallel.ForEach(lastLocationDetailRun,parallelOptions, async report => await WriteLocationFromClosestKnownIfSameDay(report.Value));
+                }
                 else
-                    await reportDetails.ParallelForEachAsync(WriteLocationFromClosestKnownIfSameDay, appSettings.MaxDop);
+                    logger.LogWarning("Unable to report missing locations.");
             }
             else
             {
                 var topFiles = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories);
                 logger.LogDebug("Found {Count} files to add location from timeline to", topFiles.Count());
-                await topFiles.ParallelForEachAsync<FileInfo>(AddlocationFromTimeLine, appSettings.MaxDop);
+                await topFiles.ParallelForEachAsync(AddlocationFromTimeLine, appSettings.MaxDop);
             }
         }
         private async Task AddlocationFromTimeLine(FileInfo fi)

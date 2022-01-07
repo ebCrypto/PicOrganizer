@@ -37,8 +37,7 @@
 
         public class Inputs
         {
-            public string RootDirectory { get; set; }
-            public string[] Subfolders { get; set; }
+            public string[] SourceFolders { get; set; }
             public string CleanDirectoryName { get; set; }
             public string TimelineName { get; set; }
             public int StartingYearOfLibrary { get; set; }

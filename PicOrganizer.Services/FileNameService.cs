@@ -50,8 +50,8 @@ namespace PicOrganizer.Services
 
             if (Guid.TryParse(output, out var resultGuid))
             {
-                logger.LogDebug("Found Guid in {File}", output);
                 output = Math.Abs(output.GetHashCode()).ToString();
+                logger.LogDebug("Found Guid in {File}, renaming {NewName}", input, output);
             }
             else
             if (records != null && records.Any() && !string.IsNullOrEmpty(input))

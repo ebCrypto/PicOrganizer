@@ -72,7 +72,7 @@ namespace PicOrganizer.Services
                 foreach (var modelResult in modelResults)
                 {
                     SortedDictionary<string, object>? resolution = modelResult.Resolution;
-                    logger.LogDebug("Found {Count} item(s) while attempting date resolution for name {Name}", resolution.Count(), name);
+                    logger.LogDebug("Found {Count} option(s) while attempting date resolution for name {Name}", resolution.Count(), name);
                     foreach (KeyValuePair<string, object> resolutionValue in resolution)
                     {
                         var value = (List<Dictionary<string, string>>)resolutionValue.Value;

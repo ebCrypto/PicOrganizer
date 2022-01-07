@@ -52,7 +52,7 @@ namespace PicOrganizer.Services
             logger.LogTrace("Looking for FileInfos in {Source}, using the SearchPattern {SearchPattern} and SearchOption {SearchOption}", source.FullName, searchPatterns, searchOption);
             if (string.IsNullOrEmpty(searchPatterns))
             {
-                var fileInfos = source.GetFiles("*", searchOption);
+                var fileInfos = source.GetFiles(appSettings.AllFileExtensions, searchOption);
                 var files = fileInfos.Select(p => p.FullName).Except(GetExceptionList());
                 return fileInfos.Where(p=> files.Contains(p.FullName)); 
             }

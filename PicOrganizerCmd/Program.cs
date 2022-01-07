@@ -7,7 +7,6 @@ using PicOrganizer.Services;
 using PicOrganizer.Models;
 using static PicOrganizer.Services.ILocationService;
 using Microsoft.Extensions.Configuration;
-using System.Text.Json;
 
 var config = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
@@ -16,7 +15,7 @@ var config = new ConfigurationBuilder()
                .Build();
 var appSettings = config.Get<AppSettings>();
 
-Log.Logger = new LoggerConfiguration()
+Log.Logger = new LoggerConfiguration() // TODO move this to appSettings.json
     .MinimumLevel.Debug()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .Enrich.FromLogContext()
@@ -67,6 +66,8 @@ static async void DoWork(IServiceProvider services)
     var target = new DirectoryInfo(appSettings.OutputSettings.TargetDirectory);
     if (target.Exists && appSettings.InputSettings.Mode == AppSettings.Mode.Full)
     {
+        logger.LogWarning("About to delete {Target}... KILL PROGRAM IF YOU WISH TO ABORT... Or Enter to continue...", target.FullName);
+        Console.ReadLine();
         target.Delete(true);
         logger.LogInformation(@"Deleted {Target}...", target.FullName);
     }
@@ -77,19 +78,18 @@ static async void DoWork(IServiceProvider services)
         await runDataService.ReadFromDisk(metaFolder);
     }
 
-    foreach ( var subFolder in appSettings.InputSettings.Subfolders)
+    foreach ( var subFolder in appSettings.InputSettings.SourceFolders)
     {
-        var source = new DirectoryInfo(Path.Combine(appSettings.InputSettings.RootDirectory, subFolder));
+        var source = new DirectoryInfo(subFolder);
         await copyPictureService.Copy(source, target);
     }
     await duplicateService.MoveDuplicates(target, new DirectoryInfo(target.FullName + appSettings.OutputSettings.DuplicatesFolderSuffix));
-    //await locationService.ReportMissing(target, "before"); 
 
     timelineService.LoadTimeLine(new FileInfo(appSettings.InputSettings.TimelineName));
     await locationService.WriteLocation(target, LocationWriter.FromClosestSameDay);
     await locationService.WriteLocation(target, LocationWriter.FromTimeline);
 
-    //await locationService.ReportMissing(target, "after");
+    await locationService.ReportMissing(target, "after");
 
     tagService.CreateTags(target);
     tagService.AddRelevantTagsToFiles(target);

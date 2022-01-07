@@ -37,7 +37,7 @@ namespace PicOrganizer.Services
             var medias = fileProviderService.GetFiles(from, fileType);
             logger.LogDebug("Found {Count} {FileType}(s) in {From}", medias.Count(), fileType, from);
             runDataService.Add(medias, from, fileType);
-            await medias.ParallelForEachAsync(CopyOneVideo, to, appSettings.MaxDop);
+            await medias.ParallelForEachAsync(fileType == IFileProviderService.FileType.Video? CopyOneVideo:CopyOnePicture, to, appSettings.MaxDop);
         }
 
         private async Task CopyOneVideo(FileInfo fileInfo, DirectoryInfo to)
@@ -97,8 +97,12 @@ namespace PicOrganizer.Services
                         dateInferred = dateRecognizerService.InferDateFromName(fileNameService.CleanName(fileInfo.Name));
                     if ((!dateRecognizerService.Valid(dateTimeOriginal) || cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned)) && !dateRecognizerService.Valid(dateInferred))
                         dateInferred = dateRecognizerService.InferDateFromName(cleanFolderName);
-                    
-                    destination = fileNameService.MakeDirectoryName(!dateRecognizerService.Valid(dateInferred)? dateTimeOriginal: dateInferred);
+
+                    DateTime folderDate = !dateRecognizerService.Valid(dateInferred) ? dateTimeOriginal : dateInferred;
+                    if (folderDate != DateTime.MinValue)
+                        destination = fileNameService.MakeDirectoryName(folderDate);
+                    else
+                        destination = Path.Combine("..", "Emmanuel-invalid-dates"); //TODO improve this 
                 }
                 catch (NotValidJPEGFileException)
                 {
@@ -106,19 +110,14 @@ namespace PicOrganizer.Services
                 }
                 catch (NotValidImageFileException)
                 {
-                    logger.LogWarning("NotValidImageFileException encoutered, assuming {File} is a Video", fileInfo.Name);
-                    destination = appSettings.OutputSettings.VideosFolderName;
+                    logger.LogWarning("NotValidImageFileException encoutered, assuming {File} is invalid", fileInfo.Name);
+                    destination = appSettings.OutputSettings.InvalidJpegFolderName;
                 }
 
                 bool sourceWhatsapp = SourceWhatsApp(fileInfo);
                 var targetDirectory = SourceWhatsApp(fileInfo)? 
                                             new DirectoryInfo(Path.Combine(to.FullName, sourceWhatsapp ? appSettings.OutputSettings.WhatsappFolderName : string.Empty, destination)):
                                             new DirectoryInfo(Path.Combine(to.FullName, destination));
-                if (!targetDirectory.Exists)
-                {
-                    targetDirectory.Create();
-                    logger.LogDebug("Created {Directory}", targetDirectory.FullName);
-                } // TODO move this to copy?
 
                 await Copy(fileInfo, targetDirectory, dateInferred);
             }
@@ -130,6 +129,11 @@ namespace PicOrganizer.Services
 
         private async Task Copy(FileInfo fileInfo, DirectoryInfo targetDirectory, DateTime dateInferred)
         {
+            if (!targetDirectory.Exists)
+            {
+                targetDirectory.Create();
+                logger.LogDebug("Created {Directory}", targetDirectory.FullName);
+            }
             string cleanName = fileNameService.AddParentDirectoryToFileName(fileInfo);
             string destFileName = Path.Combine(targetDirectory.FullName, cleanName);
             fileInfo.CopyTo(destFileName, true);
