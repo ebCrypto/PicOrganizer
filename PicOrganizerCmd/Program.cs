@@ -68,12 +68,13 @@ static async void DoWork(IServiceProvider services)
     {
         logger.LogWarning("About to delete {Target}... KILL PROGRAM IF YOU WISH TO ABORT... Or Enter to continue...", target.FullName);
         Console.ReadLine();
+        logger.LogInformation(@"Deleting {Target}...", target.FullName);
         target.Delete(true);
         logger.LogInformation(@"Deleted {Target}...", target.FullName);
     }
     if (appSettings.InputSettings.Mode == AppSettings.Mode.DeltasOnly)
     {
-        var metaFolder = new DirectoryInfo(target.FullName + appSettings.OutputSettings.MetaDataFolderSuffix);
+        var metaFolder = new DirectoryInfo(Path.Combine(target.FullName,appSettings.OutputSettings.MetaDataFolderName));
         logger.LogInformation(@"Delta mode... looking for meta data in {Target}...", metaFolder.FullName);
         await runDataService.ReadFromDisk(metaFolder);
     }
@@ -83,7 +84,7 @@ static async void DoWork(IServiceProvider services)
         var source = new DirectoryInfo(subFolder);
         await copyPictureService.Copy(source, target);
     }
-    await duplicateService.MoveDuplicates(target, new DirectoryInfo(target.FullName + appSettings.OutputSettings.DuplicatesFolderSuffix));
+    await duplicateService.MoveDuplicates(target, new DirectoryInfo(Path.Combine(target.FullName , appSettings.OutputSettings.DuplicatesFolderName)));
 
     timelineService.LoadTimeLine(new FileInfo(appSettings.InputSettings.TimelineName));
     await locationService.WriteLocation(target, LocationWriter.FromClosestSameDay);

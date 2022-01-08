@@ -19,6 +19,8 @@ namespace PicOrganizer.Services
 
         public string MakeDirectoryName(DateTime dt)
         {
+            if (dt.Year <= appSettings.InputSettings.StartingYearOfLibrary)
+                return appSettings.OutputSettings.UnknownDateFolderName;
             return dt.ToString(appSettings.OutputSettings.SubFolderDateFormat);
         }
 
@@ -50,7 +52,7 @@ namespace PicOrganizer.Services
 
             if (Guid.TryParse(output, out var resultGuid))
             {
-                output = Math.Abs(output.GetHashCode()).ToString();
+                output = Math.Abs(output.GetHashCode()).ToString().Substring(1);
                 logger.LogDebug("Found Guid in {File}, renaming {NewName}", input, output);
             }
             else

@@ -99,10 +99,7 @@ namespace PicOrganizer.Services
                         dateInferred = dateRecognizerService.InferDateFromName(cleanFolderName);
 
                     DateTime folderDate = !dateRecognizerService.Valid(dateInferred) ? dateTimeOriginal : dateInferred;
-                    if (folderDate != DateTime.MinValue)
-                        destination = fileNameService.MakeDirectoryName(folderDate);
-                    else
-                        destination = Path.Combine("..", "Emmanuel-invalid-dates"); //TODO improve this 
+                    destination = folderDate != DateTime.MinValue ? Path.Combine(appSettings.OutputSettings.PicturesFolderName, fileNameService.MakeDirectoryName(folderDate)): appSettings.OutputSettings.UnknownDateFolderName;
                 }
                 catch (NotValidJPEGFileException)
                 {

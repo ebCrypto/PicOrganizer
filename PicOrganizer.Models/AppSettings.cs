@@ -25,9 +25,11 @@
         {
             public string TargetDirectory { get; set; }
             public string VideosFolderName { get; set; }
-            public string DuplicatesFolderSuffix { get; set; }
-            public string MetaDataFolderSuffix { get; set ; }
+            public string PicturesFolderName { get; set; }
+            public string DuplicatesFolderName { get; set; }
+            public string MetaDataFolderName { get; set ; }
             public string InvalidJpegFolderName { get; set; }
+            public string UnknownDateFolderName { get; set; }
             public string UnkownFolderName { get; set; }
             public string ReportDuplicatesName { get; set; }
             public string ReportDetailName { get; set; }

@@ -48,7 +48,7 @@ namespace PicOrganizer.Services
 
         public void WriteToDisk(DirectoryInfo target)
         {
-            var directory = new DirectoryInfo(target.FullName + appSettings.OutputSettings.MetaDataFolderSuffix);
+            var directory = new DirectoryInfo(Path.Combine(target.FullName , appSettings.OutputSettings.MetaDataFolderName));
             Directory.CreateDirectory(directory.FullName);
             var filesInTarget = fileProviderService.GetFiles(target, IFileProviderService.FileType.AllMedia);
             Add(filesInTarget, target, IFileProviderService.FileType.AllMedia);  
