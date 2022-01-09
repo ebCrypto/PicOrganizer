@@ -36,7 +36,7 @@ namespace PicOrganizer.Services
             logger.LogInformation("About to Copy {FileType} from {Source}...", fileType, from.FullName);
             var medias = fileProviderService.GetFiles(from, fileType);
             logger.LogDebug("Found {Count} {FileType}(s) in {From}", medias.Count(), fileType, from);
-            runDataService.Add(medias, from, fileType);
+            runDataService.Add(medias, from, fileType); //TODO remove files with errors
             await medias.ParallelForEachAsync(fileType == IFileProviderService.FileType.Video? CopyOneVideo:CopyOnePicture, to, appSettings.MaxDop);
         }
 

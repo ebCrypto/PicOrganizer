@@ -89,9 +89,9 @@ namespace PicOrganizer.Services
             return DateTime.MinValue;
         }
 
-        public bool Valid(DateTime result)
+        public bool Valid(DateTime value)
         {
-            return result != DateTime.MinValue && result.Year >= appSettings.InputSettings.StartingYearOfLibrary;
+            return value != DateTime.MinValue && value.Year >= appSettings.InputSettings.StartingYearOfLibrary && value.Year <= DateTime.Today.Year;
         }
     }
 }

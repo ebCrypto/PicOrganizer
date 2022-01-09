@@ -46,7 +46,6 @@ namespace PicOrganizer.Services
 
         public string CleanName(string input)
         { 
-
             var extension = Path.GetExtension(input);
             var output = string.IsNullOrEmpty(extension) ? input : input[..^extension.Length];
 
@@ -74,9 +73,7 @@ namespace PicOrganizer.Services
                 if (cleanFolderName.Length > 0)
                     cleanFolderName += " ";
                 var cleanFileName = CleanName(fileInfo.Name);
-                string result = string.Format($"{cleanFolderName}{cleanFileName}").Replace("__", "_");
-                if (result.StartsWith("_"))
-                    result = result.Substring(1);
+                string result = string.Format($"{cleanFolderName}{cleanFileName}");
                 return result;
             }
             catch (Exception e)

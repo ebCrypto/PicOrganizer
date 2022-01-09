@@ -20,7 +20,7 @@ namespace PicOrganizer.Services
         public async Task MoveDuplicates(DirectoryInfo di, DirectoryInfo destination)
         {
             logger.LogDebug("About to look for duplicates in {Directory}", di.FullName);
-            var fileInfos = fileProviderService.GetFilesViaPattern(di,appSettings.AllFileExtensions, SearchOption.TopDirectoryOnly);
+            var fileInfos = fileProviderService.GetFilesViaPattern(di,appSettings.PictureAndVideoFilter, SearchOption.TopDirectoryOnly);
             var topFilesLength = fileInfos.Select(f => new { f.Length, f.FullName }).ToList();
             int countDuplicates = 0;
             if (topFilesLength.Any())

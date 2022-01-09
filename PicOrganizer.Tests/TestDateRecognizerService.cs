@@ -1,7 +1,9 @@
 using Xunit;
 using PicOrganizer.Services;
 using PicOrganizer.Models;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.IO;
 
 namespace PicOrganizer.Tests;
 
@@ -12,7 +14,11 @@ public class TestDateRecognizerService
 
     public TestDateRecognizerService()
     {
-        appSettings = new AppSettings();
+        var config = new ConfigurationBuilder() 
+                  .AddJsonFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\PicOrganizerCmd\appSettings.json"))
+                  .Build();
+        appSettings = config.Get<AppSettings>();
+
         verifiableLogger = new VerifiableLogger<DateRecognizerService>();
     }
 

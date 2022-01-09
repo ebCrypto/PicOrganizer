@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using Serilog.Events;
 using PicOrganizer.Services;
 using PicOrganizer.Models;
 using static PicOrganizer.Services.ILocationService;
@@ -15,12 +14,8 @@ var config = new ConfigurationBuilder()
                .Build();
 var appSettings = config.Get<AppSettings>();
 
-Log.Logger = new LoggerConfiguration() // TODO move this to appSettings.json
-    .MinimumLevel.Debug()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File(@"c:\temp\logs\log.txt",rollingInterval: RollingInterval.Day)
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(config)
     .CreateLogger();
 
 using IHost host = Host.CreateDefaultBuilder(args)
