@@ -2,6 +2,7 @@
 {
     public interface ICopyDigitalMediaService
     {
-        Task Copy(DirectoryInfo from, DirectoryInfo to);
+        Task Copy(DirectoryInfo to);
+        void PropagateToOtherTargets();
     }
 }

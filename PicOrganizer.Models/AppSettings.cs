@@ -23,10 +23,11 @@
 
         public class Outputs
         {
-            public string TargetDirectory { get; set; }
+            public string[] TargetDirectories { get; set; }
             public string VideosFolderName { get; set; }
             public string PicturesFolderName { get; set; }
             public string DuplicatesFolderName { get; set; }
+            public bool DeleteDuplicates { get; set; }
             public string MetaDataFolderName { get; set ; }
             public string InvalidJpegFolderName { get; set; }
             public string UnknownDateFolderName { get; set; }

@@ -32,7 +32,7 @@ namespace PicOrganizer.Services
 
         public async Task<IEnumerable<ReportDetail>> ReportMissing(DirectoryInfo di, string step, bool writeToDisk = true)
         {
-            if (di.FullName == appSettings.OutputSettings.TargetDirectory)
+            if (di.FullName == appSettings.OutputSettings.TargetDirectories.First() )
                 lastLocationDetailRun = new ConcurrentDictionary<string, List<ReportDetail>>();
 
             logger.LogDebug("About to create Location Report in {Directory}", di.FullName);

@@ -48,14 +48,21 @@ namespace PicOrganizer.Services
 
         public void WriteToDisk(DirectoryInfo target)
         {
-            var directory = new DirectoryInfo(Path.Combine(target.FullName , appSettings.OutputSettings.MetaDataFolderName));
-            Directory.CreateDirectory(directory.FullName);
-            var filesInTarget = fileProviderService.GetFiles(target, IFileProviderService.FileType.AllMedia);
-            Add(filesInTarget, target, IFileProviderService.FileType.AllMedia);  
-            metaDataRun.endTime = DateTimeOffset.Now;
-            string path = Path.Combine(directory.FullName, metaDataRun.endTime.ToString("yyyy-MM-dd_HH-mm-ss-fff") + ".json");
-            File.WriteAllText(path, JsonSerializer.Serialize(metaDataRun));
-            logger.LogInformation("Saved Meta {File}", path);
+            try
+            {
+                var directory = new DirectoryInfo(Path.Combine(target.FullName, appSettings.OutputSettings.MetaDataFolderName));
+                Directory.CreateDirectory(directory.FullName);
+                var filesInTarget = fileProviderService.GetFiles(target, IFileProviderService.FileType.AllMedia);
+                Add(filesInTarget, target, IFileProviderService.FileType.AllMedia);
+                metaDataRun.endTime = DateTimeOffset.Now;
+                string path = Path.Combine(directory.FullName, metaDataRun.endTime.ToString("yyyy-MM-dd_HH-mm-ss-fff") + ".json");
+                File.WriteAllText(path, JsonSerializer.Serialize(metaDataRun));
+                logger.LogInformation("Saved Meta {File}", path);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "unable to save metaData");
+            }
         }
 
         public void Add(IEnumerable<FileInfo> result, DirectoryInfo di, IFileProviderService.FileType fileType)
@@ -66,13 +73,7 @@ namespace PicOrganizer.Services
                 FullName = di.FullName,
                 Type = fileType.ToString(),
                 Files = result.Select (
-                    p=>new MetaDataFile() { 
-                    FullName = p.FullName, 
-                    Name = p.Name, 
-                    Extension = p.Extension, 
-                    LastWriteTimeUtc = p.LastWriteTimeUtc,
-                    Length = p.Length
-                    }
+                    p=>new MetaDataFile(p)
                 )
             });
         } 

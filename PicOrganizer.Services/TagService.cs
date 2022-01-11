@@ -59,6 +59,7 @@ namespace PicOrganizer.Services
                parallelOptions,
                async f => await AddRelevantTagsToFile(f, di))
                ;
+            logger.LogInformation("Done tagging pictures in Directory {Directory}", di.FullName);
         }
 
         public async Task AddRelevantTagsToFile(FileInfo f, DirectoryInfo rootToIgnore)

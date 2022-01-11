@@ -58,7 +58,7 @@ static async void DoWork(IServiceProvider services)
     logger.LogInformation("Starting...");
     dirNameService.LoadCleanDirList(new FileInfo(appSettings.InputSettings.CleanDirectoryName));
 
-    var target = new DirectoryInfo(appSettings.OutputSettings.TargetDirectory);
+    var target = new DirectoryInfo(appSettings.OutputSettings.TargetDirectories.FirstOrDefault());
     if (target.Exists && appSettings.InputSettings.Mode == AppSettings.Mode.Full)
     {
         logger.LogWarning("About to delete {Target}... KILL PROGRAM IF YOU WISH TO ABORT... Or Enter to continue...", target.FullName);
@@ -70,15 +70,17 @@ static async void DoWork(IServiceProvider services)
     if (appSettings.InputSettings.Mode == AppSettings.Mode.DeltasOnly)
     {
         var metaFolder = new DirectoryInfo(Path.Combine(target.FullName,appSettings.OutputSettings.MetaDataFolderName));
+        if (!metaFolder.Exists)
+        {
+            logger.LogError("Unable to find Meta Data folder {Meta}", metaFolder.FullName);
+            Environment.Exit(-1);
+        }
         logger.LogInformation(@"Delta mode... looking for meta data in {Target}...", metaFolder.FullName);
         await runDataService.ReadFromDisk(metaFolder);
     }
 
-    foreach ( var subFolder in appSettings.InputSettings.SourceFolders)
-    {
-        var source = new DirectoryInfo(subFolder);
-        await copyPictureService.Copy(source, target);
-    }
+    await copyPictureService.Copy(target);
+
     await duplicateService.MoveDuplicates(target, new DirectoryInfo(Path.Combine(target.FullName , appSettings.OutputSettings.DuplicatesFolderName)));
 
     timelineService.LoadTimeLine(new FileInfo(appSettings.InputSettings.TimelineName));
@@ -91,5 +93,8 @@ static async void DoWork(IServiceProvider services)
     tagService.AddRelevantTagsToFiles(target);
 
     runDataService.WriteToDisk(target);
+
+    copyPictureService.PropagateToOtherTargets();
+
     logger.LogInformation("Done...");
 }

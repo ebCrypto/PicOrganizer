@@ -68,9 +68,15 @@ namespace PicOrganizer.Services
                 {
                     destFileName = Path.Combine(destination.FullName, fileInfo.Name);
                     if (File.Exists(destFileName))
-                        fileInfo.Delete();    
+                        fileInfo.Delete();
                     else
-                        fileInfo.MoveTo(destFileName);
+                    {
+                        if (appSettings.OutputSettings.DeleteDuplicates)
+                            fileInfo.Delete();
+                        else
+                            fileInfo.MoveTo(destFileName);
+                        logger.LogTrace("done {Action} File {File}", appSettings.OutputSettings.DeleteDuplicates ? "delete" : "move", fileInfo);
+                    }
                     return preExistingFile;
                 }
 
@@ -78,12 +84,18 @@ namespace PicOrganizer.Services
                 if (File.Exists(destFileName))
                     preExistingFile.Delete();
                 else
-                    preExistingFile.MoveTo(destFileName);
+                {
+                    if (appSettings.OutputSettings.DeleteDuplicates)
+                        preExistingFile.Delete();
+                    else
+                        preExistingFile.MoveTo(destFileName);
+                    logger.LogTrace("done {Action} File {File}", appSettings.OutputSettings.DeleteDuplicates ? "delete" : "move", preExistingFile);
+                }
                 return fileInfo;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Can't move duplicate {File1}", preExistingFile.FullName);
+                logger.LogError(ex, "Can't {Action} duplicate {File1}", appSettings.OutputSettings.DeleteDuplicates? "delete": "move",  preExistingFile.FullName);
                 return null;
             }
         }

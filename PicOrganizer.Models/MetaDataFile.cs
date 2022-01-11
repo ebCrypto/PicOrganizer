@@ -2,6 +2,18 @@
 {
     public class MetaDataFile
     {
+        public MetaDataFile(FileInfo p)
+        {
+            if (p!= null && p.Exists)
+            {
+                Name = p.Name;
+                FullName = p.FullName;  
+                Length = p.Length;
+                LastWriteTimeUtc = p.LastWriteTimeUtc;
+                Extension = p.Extension;
+            }
+        }
+
         public string Name { get; set; }
         public string FullName { get; set; }
         public long Length { get; set; }
