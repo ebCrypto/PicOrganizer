@@ -56,9 +56,12 @@ static async void DoWork(IServiceProvider services)
     var runDataService = provider.GetRequiredService<IRunDataService>();
 
     logger.LogInformation("Starting...");
-    var cleanDirList = new FileInfo(appSettings.InputSettings.CleanDirectoryName);
-    if(cleanDirList.Exists)
-        dirNameService.LoadCleanDirList(cleanDirList);
+    if (!string.IsNullOrEmpty(appSettings.InputSettings.CleanDirectoryName))
+    {
+        var cleanDirList = new FileInfo(appSettings.InputSettings.CleanDirectoryName);
+        if (cleanDirList.Exists)
+            dirNameService.LoadCleanDirList(cleanDirList);
+    }
 
     var target = new DirectoryInfo(appSettings.OutputSettings.TargetDirectories.FirstOrDefault());
     if (target.Exists && appSettings.InputSettings.Mode == AppSettings.Mode.Full)
@@ -85,9 +88,12 @@ static async void DoWork(IServiceProvider services)
 
     await duplicateService.MoveDuplicates(target, new DirectoryInfo(Path.Combine(target.FullName , appSettings.OutputSettings.DuplicatesFolderName)));
 
-    var timelineFile = new FileInfo(appSettings.InputSettings.TimelineName);
-    if ( timelineFile.Exists)
-        timelineService.LoadTimeLine(timelineFile);
+    if (!string.IsNullOrEmpty(appSettings.InputSettings.TimelineName))
+    {
+        var timelineFile = new FileInfo(appSettings.InputSettings.TimelineName);
+        if (timelineFile.Exists)
+            timelineService.LoadTimeLine(timelineFile);
+    }
     await locationService.WriteLocation(target, LocationWriter.FromClosestSameDay);
     await locationService.WriteLocation(target, LocationWriter.FromTimeline);
 
