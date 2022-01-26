@@ -25,6 +25,7 @@
         {
             public string[] TargetDirectories { get; set; }
             public string VideosFolderName { get; set; }
+            public string ReportsFolderName { get; set; }
             public string PicturesFolderName { get; set; }
             public string DuplicatesFolderName { get; set; }
             public bool DeleteDuplicates { get; set; }
@@ -36,6 +37,7 @@
             public string ReportDetailName { get; set; }
             public string WhatsappFolderName { get; set; }
             public string SubFolderDateFormat { get; set; }
+            public string ReportMissingLocName { get; set; }
         }
 
         public class Inputs

@@ -42,7 +42,7 @@ namespace PicOrganizer.Services
                 }
                 catch (Exception ex)
                 {
-                    logger.LogWarning("Unable to load file {Path}", metaFile.FullName);
+                    logger.LogWarning(ex, "Unable to load meta file {Path}", metaFile.FullName);
                 }
         }
 

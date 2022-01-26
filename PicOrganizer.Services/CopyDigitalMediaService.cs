@@ -85,7 +85,7 @@ namespace PicOrganizer.Services
         {
             try
             {
-                if ( appSettings.InputSettings.ExcludedFiles.Contains(fileInfo.Name))
+                if (appSettings.InputSettings.ExcludedFiles!= null && appSettings.InputSettings.ExcludedFiles.Contains(fileInfo.Name))
                 {
                     logger.LogInformation("Skipping file {File} because it is part of the exclusion list", fileInfo.FullName);
                     return;
@@ -188,6 +188,7 @@ namespace PicOrganizer.Services
             var regex = new Regex(appSettings.WhatsappNameRegex);
             return regex.IsMatch(fi.Name);
         }
+
 
         public void PropagateToOtherTargets()
         {

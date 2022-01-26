@@ -13,7 +13,7 @@ namespace PicOrganizer.Services
             this.logger = logger;
         }
 
-        public async Task Write<T>(FileInfo fileInfo, List<T> records)
+        public async Task WriteAsync<T>(FileInfo fileInfo, List<T> records)
         {
             if (records != null && records.Any())
             {
@@ -23,7 +23,20 @@ namespace PicOrganizer.Services
                 await csv.WriteRecordsAsync(records);
             }
             else
-                logger.LogDebug("Nothing to write to {FileName}", fileInfo.FullName);
+                logger.LogTrace("Nothing to write to {FileName}", fileInfo.FullName);
+        }
+
+        public void Write<T>(FileInfo fileInfo, List<T> records)
+        {
+            if (records != null && records.Any())
+            {
+                using var writer = new StreamWriter(fileInfo.FullName, false);
+                using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+                logger.LogDebug("Writing {Count} row(s) to {FileName}", records.Count, fileInfo.FullName);
+                csv.WriteRecords(records);
+            }
+            else
+                logger.LogTrace("Nothing to write to {FileName}", fileInfo.FullName);
         }
 
         public async Task<IEnumerable<T>> Read<T>(FileInfo fileInfo)

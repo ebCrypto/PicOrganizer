@@ -71,12 +71,14 @@ namespace PicOrganizer.Services
                     logger.LogTrace("Skiping invalid file {File}", f.FullName);
                     return;
                 }
-                var words = MakeWordList(f, rootToIgnore);
-                var relevantTags = Tags.Intersect(words);
-                string tagString = string.Join(";", relevantTags);
                 ImageFile imageFile;
-
                 imageFile = await ImageFile.FromFileAsync(f.FullName);
+                var existingTags = (string)imageFile.Properties.Get(ExifTag.WindowsKeywords).Value;
+                var existingTagArray = !string.IsNullOrEmpty(existingTags) && existingTags.Contains(';') ? existingTags.Split(";").ToList() : new List<string>() ;
+                var words = MakeWordList(f, rootToIgnore);
+                var relevantTags = Tags.Intersect(words).Intersect(existingTagArray);
+                
+                string tagString = string.Join(";", relevantTags);
                 imageFile.Properties.Set(ExifTag.WindowsKeywords, tagString);
                 await imageFile.SaveAsync(f.FullName);
                 logger.LogTrace("Added tags {Tags} to file {File}",tagString, f.FullName);

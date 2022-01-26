@@ -30,26 +30,33 @@ namespace PicOrganizer.Services
             this.parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = appSettings.MaxDop };
         }
 
-        public async Task<IEnumerable<ReportDetail>> ReportMissing(DirectoryInfo di, string step, bool writeToDisk = true)
+        public IEnumerable<ReportDetail> ReportMissing(DirectoryInfo di, string step, bool writeToDisk = true)
         {
             if (di.FullName == appSettings.OutputSettings.TargetDirectories.First() )
                 lastLocationDetailRun = new ConcurrentDictionary<string, List<ReportDetail>>();
 
             logger.LogDebug("About to create Location Report in {Directory}", di.FullName);
-            var topFiles = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.TopDirectoryOnly).Select(f => GetReportDetail(f)).ToList();
-            await Task.WhenAll(topFiles);
-            List<ReportDetail> topLevelReport = topFiles.Select(p => p.Result).ToList() ?? new List<ReportDetail>();
-            if (topLevelReport.Any())
-                lastLocationDetailRun.AddOrUpdate(di.FullName, topLevelReport, (k,v)=> v);
+            var topPictures = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.TopDirectoryOnly);
+            var topReportDetails = topPictures.Select(f => GetReportDetail(f)).ToList() ?? new List<ReportDetail>();
+            if (topReportDetails.Any())
+                lastLocationDetailRun.AddOrUpdate(di.FullName, topReportDetails, (k,v)=> v);
             if(writeToDisk)
-                await reportService.Write(new FileInfo(Path.Combine(di.FullName, step + "_" + appSettings.OutputSettings.ReportDetailName)), topLevelReport.OrderBy(p => p.DateTime).ToList());
+            {
+                var reportDetail = new FileInfo(Path.Combine(appSettings.OutputSettings.TargetDirectories.First(), appSettings.OutputSettings.ReportsFolderName, string.Format("{0}_{1}_{2}", di.Name, step, appSettings.OutputSettings.ReportDetailName)));
+                if (!reportDetail.Directory.Exists)
+                    reportDetail.Directory.Create();
+                reportService.Write(reportDetail, topReportDetails.OrderBy(p => p.DateTime).ToList());
+            }
 
-            var filesInSubfolders = di.GetDirectories().Select(d => ReportMissing(d, step,writeToDisk)).ToList();
-            var subLevelReport = (await Task.WhenAll(filesInSubfolders)).SelectMany(p => p).ToList();
-            var comboReport = topLevelReport.Union(subLevelReport);
+            var filesInSubfolders = di.GetDirectories().Select(d => ReportMissing(d,step,writeToDisk)).ToList();
+            var subLevelReport = filesInSubfolders.SelectMany(p => p).ToList();
+            var comboReport = topReportDetails.Union(subLevelReport);
 
             if (writeToDisk)
-                await reportService.Write(new FileInfo(Path.Combine(di.FullName, step + "_reportMissingLocations.csv")), ComputeMissingLocations(comboReport));
+            {
+                var reportMissingLoc = new FileInfo(Path.Combine(appSettings.OutputSettings.TargetDirectories.First(), appSettings.OutputSettings.ReportsFolderName, string.Format("{0}_{1}_{2}", di.Name, step, appSettings.OutputSettings.ReportMissingLocName)));
+                reportService.Write(reportMissingLoc, ComputeMissingLocations(comboReport)); 
+            }
             return comboReport;
         }
 
@@ -59,7 +66,7 @@ namespace PicOrganizer.Services
             return dates.OrderBy(p => p).Select(p => new ReportMissingLocation() { Start = p, End = p.AddDays(1).AddSeconds(-1) }).ToList();
         }
 
-        private async Task<ReportDetail> GetReportDetail(FileInfo fileInfo)
+        private ReportDetail GetReportDetail(FileInfo fileInfo)
         {
             var r = new ReportDetail()
             {
@@ -76,7 +83,7 @@ namespace PicOrganizer.Services
                 GPSLatitudeLongitude longTag;
                 try
                 {
-                    imageFile = await ImageFile.FromFileAsync(fileInfo.FullName);
+                    imageFile = ImageFile.FromFile(fileInfo.FullName);
                     da = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
                     _ = DateTime.TryParse(da?.ToString(), out dt);
                     latTag = imageFile.Properties.Get<GPSLatitudeLongitude>(ExifTag.GPSLatitude);
@@ -100,7 +107,7 @@ namespace PicOrganizer.Services
             catch (Exception ex)
             {
                 logger.LogError(ex, "{ExceptionMessage} {FileName}", ex.Message, fileInfo.Name);
-            }
+            } 
             return r;
         }
 
@@ -121,7 +128,7 @@ namespace PicOrganizer.Services
                 if (lastLocationDetailRun == null)
                 {
                     logger.LogInformation("Creating data necessary to process missing locations. This might take a while... ");
-                    await ReportMissing(di, string.Empty, false);
+                    ReportMissing(di, string.Empty, false);
                 }
 
                 if (lastLocationDetailRun != null)

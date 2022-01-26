@@ -21,6 +21,11 @@ namespace PicOrganizer.Services
         {
             logger.LogDebug("About to look for duplicates in {Directory}", di.FullName);
             var fileInfos = fileProviderService.GetFilesViaPattern(di,appSettings.PictureAndVideoFilter, SearchOption.TopDirectoryOnly);
+            if ( fileInfos == null || !fileInfos.Any() )
+            {
+                logger.LogInformation("NO duplicates found");
+                return;
+            }
             var topFilesLength = fileInfos.Select(f => new { f.Length, f.FullName }).ToList();
             int countDuplicates = 0;
             if (topFilesLength.Any())

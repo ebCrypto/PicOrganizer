@@ -61,6 +61,8 @@ static async void DoWork(IServiceProvider services)
         var cleanDirList = new FileInfo(appSettings.InputSettings.CleanDirectoryName);
         if (cleanDirList.Exists)
             dirNameService.LoadCleanDirList(cleanDirList);
+        else
+            logger.LogError("cleanDirList file {File} does not exist", cleanDirList.FullName);
     }
 
     var target = new DirectoryInfo(appSettings.OutputSettings.TargetDirectories.FirstOrDefault());
@@ -74,7 +76,7 @@ static async void DoWork(IServiceProvider services)
     }
     if (appSettings.InputSettings.Mode == AppSettings.Mode.DeltasOnly)
     {
-        var metaFolder = new DirectoryInfo(Path.Combine(target.FullName,appSettings.OutputSettings.MetaDataFolderName));
+        var metaFolder = new DirectoryInfo(Path.Combine(target.FullName, appSettings.OutputSettings.MetaDataFolderName));
         if (!metaFolder.Exists)
         {
             logger.LogError("Unable to find Meta Data folder {Meta}", metaFolder.FullName);
@@ -85,26 +87,27 @@ static async void DoWork(IServiceProvider services)
     }
 
     await copyPictureService.Copy(target);
+    await duplicateService.MoveDuplicates(target, new DirectoryInfo(Path.Combine(target.FullName, appSettings.OutputSettings.DuplicatesFolderName)));
 
-    await duplicateService.MoveDuplicates(target, new DirectoryInfo(Path.Combine(target.FullName , appSettings.OutputSettings.DuplicatesFolderName)));
-
+    locationService.ReportMissing(target, "before");
+    await locationService.WriteLocation(target, LocationWriter.FromClosestSameDay);
     if (!string.IsNullOrEmpty(appSettings.InputSettings.TimelineName))
     {
         var timelineFile = new FileInfo(appSettings.InputSettings.TimelineName);
         if (timelineFile.Exists)
+        {
             timelineService.LoadTimeLine(timelineFile);
+            await locationService.WriteLocation(target, LocationWriter.FromTimeline);
+        }
+        else
+            logger.LogError("TimeLine file {File} does not exist", timelineFile.FullName);
     }
-    await locationService.WriteLocation(target, LocationWriter.FromClosestSameDay);
-    await locationService.WriteLocation(target, LocationWriter.FromTimeline);
-
-    await locationService.ReportMissing(target, "after");
+    locationService.ReportMissing(target, "after");
 
     tagService.CreateTags(target);
     tagService.AddRelevantTagsToFiles(target);
 
     runDataService.WriteToDisk(target);
-
-    copyPictureService.PropagateToOtherTargets();
 
     logger.LogInformation("Done...");
 }
