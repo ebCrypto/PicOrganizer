@@ -73,7 +73,7 @@ namespace PicOrganizer.Services
                 }
                 ImageFile imageFile;
                 imageFile = await ImageFile.FromFileAsync(f.FullName);
-                var existingTags = (string)imageFile.Properties.Get(ExifTag.WindowsKeywords).Value;
+                var existingTags = (string)imageFile.Properties.Get(ExifTag.WindowsKeywords)?.Value;
                 var existingTagArray = !string.IsNullOrEmpty(existingTags) && existingTags.Contains(';') ? existingTags.Split(";").ToList() : new List<string>() ;
                 var words = MakeWordList(f, rootToIgnore);
                 var relevantTags = Tags.Intersect(words).Intersect(existingTagArray);

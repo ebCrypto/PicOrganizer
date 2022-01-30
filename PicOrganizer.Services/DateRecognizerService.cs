@@ -66,7 +66,7 @@ namespace PicOrganizer.Services
                 }
             }
 
-            List<ModelResult>? modelResults = DateTimeRecognizer.RecognizeDateTime(name, Culture.English);
+            List<ModelResult>? modelResults = DateTimeRecognizer.RecognizeDateTime(name, appSettings.InputSettings.Culture);
             if (modelResults.Any())
             {
                 foreach (var modelResult in modelResults)

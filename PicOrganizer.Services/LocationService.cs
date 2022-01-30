@@ -1,8 +1,11 @@
 ﻿using CoordinateSharp;
+using CsvHelper;
 using ExifLibrary;
 using Microsoft.Extensions.Logging;
+using Models;
 using PicOrganizer.Models;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Linq;
 using static PicOrganizer.Services.ILocationService;
 
@@ -13,18 +16,23 @@ namespace PicOrganizer.Services
         private readonly AppSettings appSettings;
         private readonly ILogger<LocationService> logger;
         private readonly IReportReadWriteService reportService;
-        private readonly ITimelineToFilesService timelineService;
         private readonly IFileProviderService fileProviderService;
         private readonly IDateRecognizerService dateRecognizerService;
         private readonly ParallelOptions parallelOptions;
         private ConcurrentDictionary<string, List<ReportDetail>> lastLocationDetailRun;
+        private List<ReportMissingLocation> timeline;
+        private List<Location> knownLocations;
 
-        public LocationService(AppSettings appSettings, ILogger<LocationService> logger, IReportReadWriteService reportService, ITimelineToFilesService timelineService, IFileProviderService fileProviderService, IDateRecognizerService dateRecognizerService)
+        public List<ReportMissingLocation> GetTimeline()
+        {
+            return timeline;
+        }
+
+        public LocationService(AppSettings appSettings, ILogger<LocationService> logger, IReportReadWriteService reportService, IFileProviderService fileProviderService, IDateRecognizerService dateRecognizerService)
         {
             this.appSettings = appSettings;
             this.logger = logger;
             this.reportService = reportService;
-            this.timelineService = timelineService;
             this.fileProviderService = fileProviderService;
             this.dateRecognizerService = dateRecognizerService;
             this.parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = appSettings.MaxDop };
@@ -123,28 +131,46 @@ namespace PicOrganizer.Services
         public async Task WriteLocation(DirectoryInfo di, LocationWriter lw)
         {
             logger.LogInformation(@"About to Write Location {Type} for pictures in {Source}...",lw, di.FullName);
-            if (lw == LocationWriter.FromClosestSameDay)
+            switch (lw)
             {
-                if (lastLocationDetailRun == null)
-                {
-                    logger.LogInformation("Creating data necessary to process missing locations. This might take a while... ");
-                    ReportMissing(di, string.Empty, false);
-                }
+                case LocationWriter.FromClosestSameDay:
+                    {
+                        if (lastLocationDetailRun == null)
+                        {
+                            logger.LogInformation("Creating data necessary to process missing locations. This might take a while... ");
+                            ReportMissing(di, string.Empty, false);
+                        }
 
-                if (lastLocationDetailRun != null)
-                {
-                    Parallel.ForEach(lastLocationDetailRun,parallelOptions, async report => await WriteLocationFromClosestKnownIfSameDay(report.Value));
-                }
-                else
-                    logger.LogWarning("Unable to report missing locations.");
-            }
-            else
-            {
-                var topFiles = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories);
-                logger.LogDebug("Found {Count} files to add location from timeline to", topFiles.Count());
-                await topFiles.ParallelForEachAsync(AddlocationFromTimeLine, appSettings.MaxDop);
+                        if (lastLocationDetailRun != null)
+                            Parallel.ForEach(lastLocationDetailRun, parallelOptions, async report => await WriteLocationFromClosestKnownIfSameDay(report.Value));
+                        else
+                            logger.LogWarning("Unable to report missing locations.");
+                        break;
+                    }
+                case LocationWriter.FromFileName:
+                    {
+                        if (lastLocationDetailRun == null)
+                        {
+                            logger.LogInformation("Creating data necessary to process missing locations. This might take a while... ");
+                            ReportMissing(di, string.Empty, false);
+                        }
+
+                        if (lastLocationDetailRun != null)
+                            Parallel.ForEach(lastLocationDetailRun, parallelOptions, async report => await WriteLocationFromFileName(report.Value));
+                        else
+                            logger.LogWarning("Unable to report missing locations.");
+                        break;
+                    }
+                default:
+                    {
+                        var topFiles = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories);
+                        logger.LogDebug("Found {Count} files to add location from timeline to", topFiles.Count());
+                        await topFiles.ParallelForEachAsync(AddlocationFromTimeLine, appSettings.MaxDop);
+                        break;
+                    }
             }
         }
+
         private async Task AddlocationFromTimeLine(FileInfo fi)
         {
             try
@@ -158,7 +184,7 @@ namespace PicOrganizer.Services
                 if (!dateRecognizerService.Valid(dt))
                     return;
 
-                var result = timelineService.GetTimeline().Where(p => p.Start <= dt && p.End >= dt && !string.IsNullOrEmpty(p.Latitude) && !string.IsNullOrEmpty(p.Longitude));
+                var result = GetTimeline().Where(p => p.Start <= dt && p.End >= dt && !string.IsNullOrEmpty(p.Latitude) && !string.IsNullOrEmpty(p.Longitude));
                 if (result == null || !result.Any())
                 {
                     logger.LogWarning("No location found on {Date} using the provided timeline", dt.ToString());
@@ -183,6 +209,26 @@ namespace PicOrganizer.Services
             {
                 logger.LogWarning(ex, "unable to add coordinates to {File}", fi.FullName);
             }
+        }
+
+        private async Task WriteLocationFromFileName(List<ReportDetail> reportDetails)
+        {
+            int count = 0;
+            foreach (var picture in reportDetails.Where(p => string.IsNullOrEmpty(p.Latitude) || string.IsNullOrEmpty(p.Longitude)))
+            {
+                foreach (var knownLocation in knownLocations)
+                {
+                    if (picture.FullFileName.Contains(knownLocation.NameInFile))
+                    {
+                        logger.LogDebug("Will write location ({Latitude} {Longitude}) from {From} to {To}", knownLocation.Latitude, knownLocation.Longitude, knownLocation.ActualLocation, picture.FullFileName);
+                        Double.TryParse(knownLocation.Latitude, out var lat);
+                        Double.TryParse(knownLocation.Longitude, out var lon);
+                        await SaveCoordinatesToImage(lat, lon, new FileInfo(picture.FullFileName));
+                        count++;
+                    }
+                } 
+            }
+            logger.LogInformation("Added locations to {Count} files", count);
         }
 
         private async Task WriteLocationFromClosestKnownIfSameDay(IEnumerable<ReportDetail> reportDetails)
@@ -303,6 +349,33 @@ namespace PicOrganizer.Services
         private static float GetFloat(string s)
         {
             return Convert.ToSingle(s);
+        }
+
+        public void LoadTimeLine(FileInfo csv)
+        {
+            using var reader = new StreamReader(csv.FullName);
+            using CsvReader? csvReader = new(reader, CultureInfo.InvariantCulture);
+            timeline = csvReader.GetRecords<ReportMissingLocation>().ToList();
+            VerifyTimeLine();
+        }
+
+        public void VerifyTimeLine()
+        {
+            DateTime? lastEnd = null;
+            foreach (var time in GetTimeline())
+            {
+                if (lastEnd != null && time.Start != null && time.Start < lastEnd)
+                    logger.LogWarning("Unexpected timeline element starting at {Start}, which is before {LastEnd}", time.Start.ToString(), lastEnd.ToString());
+                lastEnd = time.End;
+            }
+            logger.LogDebug("Done verifying timeline");
+        }
+
+        public void LoadKnownLocations(FileInfo csv)
+        {
+            using var reader = new StreamReader(csv.FullName);
+            using CsvReader? csvReader = new(reader, CultureInfo.InvariantCulture);
+            knownLocations = csvReader.GetRecords<Location>().ToList();
         }
     }
 }

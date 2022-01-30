@@ -38,6 +38,7 @@
             public string WhatsappFolderName { get; set; }
             public string SubFolderDateFormat { get; set; }
             public string ReportMissingLocName { get; set; }
+            public string InputBackupFolderName { get; set;  }
         }
 
         public class Inputs
@@ -45,10 +46,12 @@
             public string[] SourceFolders { get; set; }
             public string CleanDirectoryName { get; set; }
             public string TimelineName { get; set; }
+            public string KnownLocations { get; set;  }
             public int StartingYearOfLibrary { get; set; }
             public string[] ExcludedFiles { get; set; }
             public string Scanned { get; set; }
             public Mode Mode { get; set; } 
+            public string Culture { get; set; }
         }
 
         public enum Mode

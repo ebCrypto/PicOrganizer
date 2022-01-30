@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using PicOrganizer.Models;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace PicOrganizer.Services
 {
@@ -45,10 +46,11 @@ namespace PicOrganizer.Services
         }
 
         public string CleanName(string input)
-        { 
+        {
+            if (string.IsNullOrEmpty(input))
+                return string.Empty;
             var extension = Path.GetExtension(input);
-            var output = string.IsNullOrEmpty(extension) ? input : input[..^extension.Length];
-
+            var output = Regex.Replace(string.IsNullOrEmpty(extension) ? input : input[..^extension.Length], @"\s+", " ");
             if (Guid.TryParse(output, out var resultGuid))
             {
                 output = Math.Abs(output.GetHashCode()).ToString().Substring(1);
