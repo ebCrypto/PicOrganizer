@@ -27,7 +27,7 @@ namespace PicOrganizer.Services
             this.parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = appSettings.MaxDop };
         }
 
-        public async Task Copy(DirectoryInfo to)
+        public async Task AddMetaAndCopy(DirectoryInfo to)
         {
             var froms = appSettings.InputSettings.SourceFolders?.Where(p => !string.IsNullOrEmpty(p)).Select(p => new DirectoryInfo(p)).ToArray();
             if (froms == null || froms.Length == 0)

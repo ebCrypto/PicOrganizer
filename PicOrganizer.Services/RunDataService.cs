@@ -9,14 +9,18 @@ namespace PicOrganizer.Services
         private readonly ILogger<RunDataService> logger;
         private readonly AppSettings appSettings;
         private readonly IFileProviderService fileProviderService;
+        private readonly IDuplicatesService duplicatesService;
+        private readonly IReportReadWriteService reportReadWriteService;
 
         public MetaDataRun metaDataRun { get; set; }
 
-        public RunDataService(ILogger<RunDataService> logger, AppSettings appSettings, IFileProviderService fileProviderService)
+        public RunDataService(ILogger<RunDataService> logger, AppSettings appSettings, IFileProviderService fileProviderService, IDuplicatesService duplicatesService, IReportReadWriteService reportReadWriteService)
         {
             this.logger = logger;
             this.appSettings = appSettings;
             this.fileProviderService = fileProviderService;
+            this.duplicatesService = duplicatesService;
+            this.reportReadWriteService = reportReadWriteService;
             metaDataRun = new MetaDataRun()
             {
                 Id = Guid.NewGuid(),

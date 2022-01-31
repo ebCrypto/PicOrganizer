@@ -39,6 +39,7 @@
             public string SubFolderDateFormat { get; set; }
             public string ReportMissingLocName { get; set; }
             public string InputBackupFolderName { get; set;  }
+            public string Md5s { get; set; }
         }
 
         public class Inputs

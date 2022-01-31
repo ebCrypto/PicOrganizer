@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using PicOrganizer.Models;
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
 namespace PicOrganizer.Services
@@ -21,43 +22,45 @@ namespace PicOrganizer.Services
         {
             logger.LogDebug("About to look for duplicates in {Directory}", di.FullName);
             var fileInfos = fileProviderService.GetFilesViaPattern(di,appSettings.PictureAndVideoFilter, SearchOption.TopDirectoryOnly);
-            if ( fileInfos == null || !fileInfos.Any() )
+            if (fileInfos == null || !fileInfos.Any())
             {
-                logger.LogInformation("NO duplicates found");
-                return;
+                logger.LogDebug("No duplicates found in {Directory}", di.FullName);
             }
-            var topFilesLength = fileInfos.Select(f => new { f.Length, f.FullName }).ToList();
-            int countDuplicates = 0;
-            if (topFilesLength.Any())
+            else
             {
-                var lengthCounts = topFilesLength.GroupBy(p => p.Length).Select(g => new { g.Key, Count = g.Count() }).ToDictionary(g => g.Key, g => g.Count);
-                foreach (var lengthCount in lengthCounts.Where(p => p.Value > 1))
+                var topFilesLength = fileInfos.Select(f => new { f.Length, f.FullName }).ToList();
+                int countDuplicates = 0;
+                if (topFilesLength.Any())
                 {
-                    var files = topFilesLength.Where(p => p.Length == lengthCount.Key).ToList();
-                    logger.LogTrace("Found Potential Duplicates {Names}", string.Join(", ", files.Select(p => p.FullName)));
-                    var hashes = new Dictionary<string, FileInfo>();
-                    foreach (var f in files)
+                    var lengthCounts = topFilesLength.GroupBy(p => p.Length).Select(g => new { g.Key, Count = g.Count() }).ToDictionary(g => g.Key, g => g.Count);
+                    foreach (var lengthCount in lengthCounts.Where(p => p.Value > 1))
                     {
-                        var fileInfo = new FileInfo(f.FullName);
-                        var hash = ComputeMd5(fileInfo);
-                        if (hashes.ContainsKey(hash))
+                        var files = topFilesLength.Where(p => p.Length == lengthCount.Key).ToList();
+                        logger.LogTrace("Found Potential Duplicates {Names}", string.Join(", ", files.Select(p => p.FullName)));
+                        var hashes = new Dictionary<string, FileInfo>();
+                        foreach (var f in files)
                         {
-                            FileInfo preExistingFile = hashes[hash];
-                            if (preExistingFile.FullName == fileInfo.FullName)
-                                continue;
-                            logger.LogInformation("Duplicates Found. {File1} & {File2} have the same hash", preExistingFile, fileInfo);
-                            countDuplicates++;
-                            FileInfo keepingFileInfo = MoveDuplicate(preExistingFile, fileInfo, destination);
-                            if ( keepingFileInfo != null)
-                                hashes[hash] = keepingFileInfo;
+                            var fileInfo = new FileInfo(f.FullName);
+                            var hash = ComputeMd5(fileInfo);
+                            if (hashes.ContainsKey(hash))
+                            {
+                                FileInfo preExistingFile = hashes[hash];
+                                if (preExistingFile.FullName == fileInfo.FullName)
+                                    continue;
+                                logger.LogInformation("Duplicates Found. {File1} & {File2} have the same hash", preExistingFile, fileInfo);
+                                countDuplicates++;
+                                FileInfo keepingFileInfo = MoveDuplicate(preExistingFile, fileInfo, destination);
+                                if (keepingFileInfo != null)
+                                    hashes[hash] = keepingFileInfo;
+                            }
+                            else
+                                hashes.Add(hash, fileInfo);
                         }
-                        else
-                            hashes.Add(hash, fileInfo);
                     }
                 }
+                logger.LogInformation("Looped through {TotalCount} files and found {DuplicateCount} duplicates", topFilesLength.Count, countDuplicates);
             }
-            logger.LogInformation("Looped through {TotalCount} files and found {DuplicateCount} duplicates", topFilesLength.Count, countDuplicates);
-            await di.GetDirectories().ToList().ParallelForEachAsync<DirectoryInfo, DirectoryInfo>(MoveDuplicates, destination, appSettings.MaxDop);
+            await di.GetDirectories().ToList().ParallelForEachAsync(MoveDuplicates, destination, appSettings.MaxDop);
         }
                                                           
         private FileInfo MoveDuplicate(FileInfo preExistingFile, FileInfo fileInfo, DirectoryInfo destination)

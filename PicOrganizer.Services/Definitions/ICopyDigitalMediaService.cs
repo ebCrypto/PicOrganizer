@@ -2,7 +2,7 @@
 {
     public interface ICopyDigitalMediaService
     {
-        Task Copy(DirectoryInfo to);
+        Task AddMetaAndCopy(DirectoryInfo to);
         
         [Obsolete]
         void PropagateToOtherTargets();

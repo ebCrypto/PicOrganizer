@@ -365,7 +365,7 @@ namespace PicOrganizer.Services
             foreach (var time in GetTimeline())
             {
                 if (lastEnd != null && time.Start != null && time.Start < lastEnd)
-                    logger.LogWarning("Unexpected timeline element starting at {Start}, which is before {LastEnd}", time.Start.ToString(), lastEnd.ToString());
+                    logger.LogError("Unexpected timeline element starting at {Start}, which is before {LastEnd}", time.Start.ToString(), lastEnd.ToString());
                 lastEnd = time.End;
             }
             logger.LogDebug("Done verifying timeline");

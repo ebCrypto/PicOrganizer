@@ -9,7 +9,9 @@ using Microsoft.Extensions.Configuration;
 
 var config = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-               .AddJsonFile("appsettings-bernard-papier.json")
+               //.AddJsonFile("appsettings-bernard-papier.json")
+               //.AddJsonFile("appsettings-bernard-diapos.json")
+               .AddJsonFile("appsettings-emmanuel.json")
                .AddEnvironmentVariables()
                .Build();
 var appSettings = config.Get<AppSettings>();
@@ -114,7 +116,7 @@ static async void DoWork(IServiceProvider services)
         await runDataService.ReadFromDisk(metaFolder);
     }
 
-    await copyPictureService.Copy(target);
+    await copyPictureService.AddMetaAndCopy(target);
     await duplicateService.MoveDuplicates(target, new DirectoryInfo(Path.Combine(target.FullName, appSettings.OutputSettings.DuplicatesFolderName)));
 
     locationService.ReportMissing(target, "before");
