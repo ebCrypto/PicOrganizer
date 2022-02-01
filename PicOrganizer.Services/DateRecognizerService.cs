@@ -80,7 +80,7 @@ namespace PicOrganizer.Services
                         DateTime.TryParse(value?[0]?["timex"], out var result);
                         if (result.Year > appSettings.InputSettings.StartingYearOfLibrary && result < DateTime.Now)
                         {
-                            logger.LogInformation("Inferring DateTaken '{Date}' from name {Name}", result.ToString(), name);
+                            logger.LogDebug("Inferring DateTaken '{Date}' from name {Name}", result.ToString(), name);
                             return result;
                         }
                     }

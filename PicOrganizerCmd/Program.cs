@@ -9,9 +9,9 @@ using Microsoft.Extensions.Configuration;
 
 var config = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-               //.AddJsonFile("appsettings-bernard-papier.json")
+               .AddJsonFile("appsettings-bernard-papier.json")
                //.AddJsonFile("appsettings-bernard-diapos.json")
-               .AddJsonFile("appsettings-emmanuel.json")
+               //.AddJsonFile("appsettings-emmanuel.json")
                .AddEnvironmentVariables()
                .Build();
 var appSettings = config.Get<AppSettings>();
@@ -119,13 +119,13 @@ static async void DoWork(IServiceProvider services)
     await copyPictureService.AddMetaAndCopy(target);
     await duplicateService.MoveDuplicates(target, new DirectoryInfo(Path.Combine(target.FullName, appSettings.OutputSettings.DuplicatesFolderName)));
 
-    locationService.ReportMissing(target, "before");
+    locationService.ReportMissing(target,LocationWriter.Before);
     if (!string.IsNullOrEmpty(appSettings.InputSettings.KnownLocations) && knownLocationsFile.Exists)
         await locationService.WriteLocation(target, LocationWriter.FromFileName);
     await locationService.WriteLocation(target, LocationWriter.FromClosestSameDay);
     if (!string.IsNullOrEmpty(appSettings.InputSettings.TimelineName) && timelineFile.Exists)
         await locationService.WriteLocation(target, LocationWriter.FromTimeline);
-    locationService.ReportMissing(target, "after");
+    locationService.ReportMissing(target, LocationWriter.After);
 
     tagService.CreateTags(target);
     tagService.AddRelevantTagsToFiles(target);

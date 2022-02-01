@@ -19,7 +19,7 @@ namespace PicOrganizer.Services
         private readonly IFileProviderService fileProviderService;
         private readonly IDateRecognizerService dateRecognizerService;
         private readonly ParallelOptions parallelOptions;
-        private ConcurrentDictionary<string, List<ReportDetail>> lastLocationDetailRun;
+        private Dictionary<LocationWriter, ConcurrentDictionary<string, List<ReportDetail>>> lastLocationDetailRun;
         private List<ReportMissingLocation> timeline;
         private List<Location> knownLocations;
 
@@ -36,33 +36,33 @@ namespace PicOrganizer.Services
             this.fileProviderService = fileProviderService;
             this.dateRecognizerService = dateRecognizerService;
             this.parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = appSettings.MaxDop };
+            lastLocationDetailRun = new Dictionary<LocationWriter, ConcurrentDictionary<string, List<ReportDetail>>>();
         }
 
-        public IEnumerable<ReportDetail> ReportMissing(DirectoryInfo di, string step, bool writeToDisk = true)
+        public IEnumerable<ReportDetail> ReportMissing(DirectoryInfo di, LocationWriter lw, bool writeToDisk = true)
         {
-            if (di.FullName == appSettings.OutputSettings.TargetDirectories.First() )
-                lastLocationDetailRun = new ConcurrentDictionary<string, List<ReportDetail>>();
-
-            logger.LogDebug("About to create Location Report in {Directory}", di.FullName);
+            if (di.FullName == appSettings.OutputSettings.TargetDirectories.First())
+                lastLocationDetailRun.Add(lw, new ConcurrentDictionary<string, List<ReportDetail>>());
+            logger.LogDebug("About to create {Type} Location Report in {Directory}",lw, di.FullName);
             var topPictures = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.TopDirectoryOnly);
             var topReportDetails = topPictures.Select(f => GetReportDetail(f)).ToList() ?? new List<ReportDetail>();
             if (topReportDetails.Any())
-                lastLocationDetailRun.AddOrUpdate(di.FullName, topReportDetails, (k,v)=> v);
+                lastLocationDetailRun[lw].AddOrUpdate(di.FullName, topReportDetails, (k,v)=> v);
             if(writeToDisk)
             {
-                var reportDetail = new FileInfo(Path.Combine(appSettings.OutputSettings.TargetDirectories.First(), appSettings.OutputSettings.ReportsFolderName, string.Format("{0}_{1}_{2}", di.Name, step, appSettings.OutputSettings.ReportDetailName)));
+                var reportDetail = new FileInfo(Path.Combine(appSettings.OutputSettings.TargetDirectories.First(), appSettings.OutputSettings.ReportsFolderName, string.Format("{0}_{1}_{2}", di.Name, lw, appSettings.OutputSettings.ReportDetailName)));
                 if (!reportDetail.Directory.Exists)
                     reportDetail.Directory.Create();
                 reportService.Write(reportDetail, topReportDetails.OrderBy(p => p.DateTime).ToList());
             }
 
-            var filesInSubfolders = di.GetDirectories().Select(d => ReportMissing(d,step,writeToDisk)).ToList();
+            var filesInSubfolders = di.GetDirectories().Select(d => ReportMissing(d,lw,writeToDisk)).ToList();
             var subLevelReport = filesInSubfolders.SelectMany(p => p).ToList();
             var comboReport = topReportDetails.Union(subLevelReport);
 
             if (writeToDisk)
             {
-                var reportMissingLoc = new FileInfo(Path.Combine(appSettings.OutputSettings.TargetDirectories.First(), appSettings.OutputSettings.ReportsFolderName, string.Format("{0}_{1}_{2}", di.Name, step, appSettings.OutputSettings.ReportMissingLocName)));
+                var reportMissingLoc = new FileInfo(Path.Combine(appSettings.OutputSettings.TargetDirectories.First(), appSettings.OutputSettings.ReportsFolderName, string.Format("{0}_{1}_{2}", di.Name, lw, appSettings.OutputSettings.ReportMissingLocName)));
                 reportService.Write(reportMissingLoc, ComputeMissingLocations(comboReport)); 
             }
             return comboReport;
@@ -135,40 +135,57 @@ namespace PicOrganizer.Services
             {
                 case LocationWriter.FromClosestSameDay:
                     {
-                        if (lastLocationDetailRun == null)
+                        if (!lastLocationDetailRun.ContainsKey(lw))
                         {
-                            logger.LogInformation("Creating data necessary to process missing locations. This might take a while... ");
-                            ReportMissing(di, string.Empty, false);
+                            ReportMissing(di,lw, false);
                         }
 
-                        if (lastLocationDetailRun != null)
-                            Parallel.ForEach(lastLocationDetailRun, parallelOptions, async report => await WriteLocationFromClosestKnownIfSameDay(report.Value));
+                        if (lastLocationDetailRun.ContainsKey(lw))
+                            foreach (var report in lastLocationDetailRun[lw])
+                                await WriteLocationFromClosestKnownIfSameDay(report);
+                        //Parallel.ForEach(lastLocationDetailRun[lw], parallelOptions, async report => await WriteLocationFromClosestKnownIfSameDay(report.Value));
                         else
                             logger.LogWarning("Unable to report missing locations.");
                         break;
                     }
                 case LocationWriter.FromFileName:
                     {
-                        if (lastLocationDetailRun == null)
+                        if (!lastLocationDetailRun.ContainsKey(lw))
                         {
-                            logger.LogInformation("Creating data necessary to process missing locations. This might take a while... ");
-                            ReportMissing(di, string.Empty, false);
+                            ReportMissing(di, lw, false);
                         }
 
-                        if (lastLocationDetailRun != null)
-                            Parallel.ForEach(lastLocationDetailRun, parallelOptions, async report => await WriteLocationFromFileName(report.Value));
+                        if (lastLocationDetailRun.ContainsKey(lw))
+                            foreach (var report in lastLocationDetailRun[lw])
+                                await WriteLocationFromFileName(report);
+                        //Parallel.ForEach(lastLocationDetailRun[lw], parallelOptions, async report => await WriteLocationFromFileName(report));
                         else
                             logger.LogWarning("Unable to report missing locations.");
                         break;
                     }
                 default:
                     {
-                        var topFiles = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories);
-                        logger.LogDebug("Found {Count} files to add location from timeline to", topFiles.Count());
-                        await topFiles.ParallelForEachAsync(AddlocationFromTimeLine, appSettings.MaxDop);
+                        if (!lastLocationDetailRun.ContainsKey(lw))
+                        {
+                            ReportMissing(di, lw, false);
+                        }
+                        if (lastLocationDetailRun.ContainsKey(lw))
+                            foreach (var report in lastLocationDetailRun[lw])
+                                await AddlocationFromTimeLine(report);
                         break;
                     }
             }
+        }
+
+        private async Task AddlocationFromTimeLine(KeyValuePair<string, List<ReportDetail>> dic)
+        {
+            int count = 0;
+            foreach (var picture in dic.Value.Where(p => string.IsNullOrEmpty(p.Latitude) || string.IsNullOrEmpty(p.Longitude)))
+            {
+                await AddlocationFromTimeLine(new FileInfo(picture.FullFileName));
+                count++;
+            }
+            logger.LogInformation("Added locations to {Count} files in {Directory} using TimeLine", count, dic.Key);
         }
 
         private async Task AddlocationFromTimeLine(FileInfo fi)
@@ -196,14 +213,9 @@ namespace PicOrganizer.Services
                     return;
                 }
                 var first = result.First();
-
                 var latitude = first.Latitude;
                 var longitude = first.Longitude;
-                var c = new Coordinate(Convert.ToDouble(latitude), Convert.ToDouble(longitude), DateTime.Today);
-                MakeLatitude(c, imageFile);
-                MakeLongitude(c, imageFile);
-                await imageFile.SaveAsync(fi.FullName);
-                logger.LogTrace("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
+                await SaveCoordinatesToImage(latitude, longitude, fi);
             }
             catch (Exception ex)
             {
@@ -211,29 +223,30 @@ namespace PicOrganizer.Services
             }
         }
 
-        private async Task WriteLocationFromFileName(List<ReportDetail> reportDetails)
+        private async Task WriteLocationFromFileName(KeyValuePair<string, List<ReportDetail>> dic)
         {
             int count = 0;
-            foreach (var picture in reportDetails.Where(p => string.IsNullOrEmpty(p.Latitude) || string.IsNullOrEmpty(p.Longitude)))
+            foreach (var picture in dic.Value.Where(p => string.IsNullOrEmpty(p.Latitude) || string.IsNullOrEmpty(p.Longitude)))
             {
                 foreach (var knownLocation in knownLocations)
                 {
                     if (picture.FullFileName.Contains(knownLocation.NameInFile))
                     {
-                        logger.LogDebug("Will write location ({Latitude} {Longitude}) from {From} to {To}", knownLocation.Latitude, knownLocation.Longitude, knownLocation.ActualLocation, picture.FullFileName);
-                        Double.TryParse(knownLocation.Latitude, out var lat);
-                        Double.TryParse(knownLocation.Longitude, out var lon);
+                        logger.LogTrace("Will write location ({Latitude} {Longitude}) from {From} to {To}", knownLocation.Latitude, knownLocation.Longitude, knownLocation.ActualLocation, picture.FullFileName);
+                        double.TryParse(knownLocation.Latitude, out var lat);
+                        double.TryParse(knownLocation.Longitude, out var lon);
                         await SaveCoordinatesToImage(lat, lon, new FileInfo(picture.FullFileName));
                         count++;
                     }
                 } 
             }
-            logger.LogInformation("Added locations to {Count} files", count);
+            logger.LogInformation("Added locations to {Count} files in {Directory} using FileName", count, dic.Key);
         }
 
-        private async Task WriteLocationFromClosestKnownIfSameDay(IEnumerable<ReportDetail> reportDetails)
+        private async Task WriteLocationFromClosestKnownIfSameDay(KeyValuePair<string, List<ReportDetail>> dic)
         {
             int count = 0;
+            var reportDetails = dic.Value;
             foreach (var picture in reportDetails.Where(p => string.IsNullOrEmpty(p.Latitude) || string.IsNullOrEmpty(p.Longitude)))
             {
                 var picKnownLoc = reportDetails
@@ -246,17 +259,17 @@ namespace PicOrganizer.Services
 
                 if (picKnownLoc != null)
                 {
-                    logger.LogDebug("Will copy location ({Latitude} {Longitude}) from {From} to {To}", picKnownLoc.Latitude, picKnownLoc.Longitude, picKnownLoc.FullFileName, picture.FullFileName);
+                    logger.LogTrace("Will copy location ({Latitude} {Longitude}) from {From} to {To}", picKnownLoc.Latitude, picKnownLoc.Longitude, picKnownLoc.FullFileName, picture.FullFileName);
                     await SaveDMSCoordinatesToImage(picKnownLoc.Latitude, picKnownLoc.Longitude, new FileInfo(picture.FullFileName));
                     count++;
                 }
                 else
                     logger.LogDebug("Unable to find a picture with location taken on {Date}", picture.DateTime.Date.ToShortDateString());
             }
-            logger.LogInformation("Added locations to {Count} files", count);
+            logger.LogInformation("Added locations to {Count} files in {Directory} using SameDayKnownLocation", count, dic.Key);
         }
 
-        public async Task SaveDoubleCoordinatesToImage(string latitude, string longitude, FileInfo fi)
+        public async Task SaveCoordinatesToImage(string latitude, string longitude, FileInfo fi)
         {
             await SaveCoordinatesToImage(Convert.ToDouble(latitude), Convert.ToDouble(longitude), fi);
         }
@@ -272,7 +285,7 @@ namespace PicOrganizer.Services
                 MakeLatitude(c, ef);
                 MakeLongitude(c, ef);
                 await ef.SaveAsync(fi.FullName);
-                logger.LogTrace("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
+                logger.LogDebug("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
             }
             catch (Exception ex)
             {

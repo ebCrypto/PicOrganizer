@@ -58,7 +58,7 @@ namespace PicOrganizer.Services
                         }
                     }
                 }
-                logger.LogInformation("Looped through {TotalCount} files and found {DuplicateCount} duplicates", topFilesLength.Count, countDuplicates);
+                logger.LogInformation("Looped through {TotalCount} files in {Directory} and found {DuplicateCount} duplicates", topFilesLength.Count, di.FullName, countDuplicates);
             }
             await di.GetDirectories().ToList().ParallelForEachAsync(MoveDuplicates, destination, appSettings.MaxDop);
         }
