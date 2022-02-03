@@ -47,7 +47,7 @@ namespace PicOrganizer.Services
                                 FileInfo preExistingFile = hashes[hash];
                                 if (preExistingFile.FullName == fileInfo.FullName)
                                     continue;
-                                logger.LogInformation("Duplicates Found. {File1} & {File2} have the same hash", preExistingFile, fileInfo);
+                                logger.LogDebug("Duplicates Found. {File1} & {File2} have the same hash", preExistingFile, fileInfo);
                                 countDuplicates++;
                                 FileInfo keepingFileInfo = MoveDuplicate(preExistingFile, fileInfo, destination);
                                 if (keepingFileInfo != null)

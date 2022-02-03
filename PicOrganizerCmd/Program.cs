@@ -9,8 +9,7 @@ using Microsoft.Extensions.Configuration;
 
 var config = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-               .AddJsonFile("appsettings-bernard-papier.json")
-               //.AddJsonFile("appsettings-bernard-diapos.json")
+               .AddJsonFile("appsettings-bernard-all.json")
                //.AddJsonFile("appsettings-emmanuel.json")
                .AddEnvironmentVariables()
                .Build();

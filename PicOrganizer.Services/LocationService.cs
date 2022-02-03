@@ -225,6 +225,11 @@ namespace PicOrganizer.Services
 
         private async Task WriteLocationFromFileName(KeyValuePair<string, List<ReportDetail>> dic)
         {
+            if(dic.Key.Contains(appSettings.OutputSettings.WhatsappFolderName,StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogDebug("not applyting timeline locations to {Directory}", dic.Key);
+                return;
+            }
             int count = 0;
             foreach (var picture in dic.Value.Where(p => string.IsNullOrEmpty(p.Latitude) || string.IsNullOrEmpty(p.Longitude)))
             {

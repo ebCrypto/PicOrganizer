@@ -71,7 +71,12 @@ namespace PicOrganizer.Services
             {
                 foreach (var modelResult in modelResults)
                 {
-                    SortedDictionary<string, object>? resolution = modelResult.Resolution;
+                    var resolution = modelResult.Resolution;
+                    if(resolution == null)
+                    {
+                        logger.LogDebug("No Resolution for {@ModelResult} in {Name}", modelResult, name);
+                        return DateTime.MinValue;
+                    }
                     logger.LogDebug("Found {Count} option(s) while attempting date resolution for name {Name}", resolution.Count(), name);
                     foreach (KeyValuePair<string, object> resolutionValue in resolution)
                     {
@@ -83,6 +88,8 @@ namespace PicOrganizer.Services
                             logger.LogDebug("Inferring DateTaken '{Date}' from name {Name}", result.ToString(), name);
                             return result;
                         }
+                        else
+                            logger.LogTrace("Declaring {Date} invalid because it is not within the range [year={Start} -> {End}]", result.ToShortDateString(), appSettings.InputSettings.StartingYearOfLibrary, DateTime.Now.ToShortDateString());
                     }
                 }
             }

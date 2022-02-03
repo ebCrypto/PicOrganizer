@@ -91,7 +91,7 @@ namespace PicOrganizer.Services
                     return;
                 }
                 logger.LogTrace("Processing {File}", fileInfo.FullName);
-                ImageFile imageFile;
+                ImageFile imageFile = null;
                 string destination = appSettings.OutputSettings.UnkownFolderName;
                 DateTime dateTimeOriginal = DateTime.MinValue;
                 DateTime dateInferred = DateTime.MinValue;
@@ -118,15 +118,15 @@ namespace PicOrganizer.Services
                 }
                 catch (NotValidImageFileException)
                 {
-                    logger.LogWarning("NotValidImageFileException encoutered, assuming {File} is invalid", fileInfo.Name);
+                    logger.LogDebug("NotValidImageFileException encoutered, will not process DateTaken for {File} ", fileInfo.Name);
                     destination = appSettings.OutputSettings.InvalidJpegFolderName;
                 }
                 catch (IOException e)
                 {
-                    logger.LogError(e, "Unable to get file {File}", fileInfo.Name);
+                    logger.LogWarning(e, "Unable to get file {File}", fileInfo.Name);
                 }
 
-                    bool sourceWhatsapp = SourceWhatsApp(fileInfo);
+                bool sourceWhatsapp = SourceWhatsApp(fileInfo);
                 var targetDirectory = SourceWhatsApp(fileInfo)? 
                                             new DirectoryInfo(Path.Combine(to.FullName, sourceWhatsapp ? appSettings.OutputSettings.WhatsappFolderName : string.Empty, destination)):
                                             new DirectoryInfo(Path.Combine(to.FullName, destination));
@@ -178,7 +178,7 @@ namespace PicOrganizer.Services
                 }
                 catch (Exception e)
                 {
-                    logger.LogWarning(e, "Unable to add date {Date} to file {File}", dateInferred.ToString(), destFileName);
+                    logger.LogDebug(e, "Unable to add date {Date} to file {File}", dateInferred.ToString(), destFileName);
                 }
             }
         }
