@@ -8,66 +8,66 @@ namespace PicOrganizer.Services
     {
         private readonly AppSettings appSettings;
         private readonly ILogger<FileProviderService> logger;
-        private List<string> except;
+        private List<string> processedPreviously;
 
         public FileProviderService(AppSettings appSettings, ILogger<FileProviderService> logger)
         {
             this.appSettings = appSettings;
             this.logger = logger;
-            except = new List<string>();
+            processedPreviously = new List<string>();
         }
 
-        public IEnumerable<string> GetExceptionList()
+        public void SetProcessedPreviously(List<string> processedPreviously)
         {
-            return except;
+            this.processedPreviously = processedPreviously;
         }
 
-        public void SetExceptionList(List<string> except)
-        {
-            this.except = except;
-        }
-
-        public IEnumerable<FileInfo> GetFiles(DirectoryInfo di, FileType fileType)
+        public IEnumerable<FileInfo> GetFiles(DirectoryInfo di, FileType fileType, bool includeAlreadyProcessed)
         {
             if (di == null)
                 return Enumerable.Empty<FileInfo>();
-            var fileNames = di.GetFiles(appSettings.AllFileExtensions, SearchOption.AllDirectories).Select(p=>p.FullName).Except(GetExceptionList());
-            var fileInfos = fileNames.Select(p => new FileInfo(p));
-            var result = fileType switch
+
+            var pattern = fileType switch
             {
-                FileType.Video => fileInfos
-                                        .Where(p => appSettings.VideoExtensions.Contains(p.Extension.ToLower())),
-                FileType.Picture => fileInfos
-                                        .Where(p => appSettings.PictureExtensions.Contains(p.Extension.ToLower())),
-                FileType.AllMedia => fileInfos
-                                        .Where(p => appSettings.VideoExtensions.Union(appSettings.PictureExtensions).Contains(p.Extension.ToLower())),
-                FileType.All => fileInfos,
-                _ => Enumerable.Empty<FileInfo>(),
+                FileType.Video => appSettings.VideoFilter,
+                FileType.Picture => appSettings.PictureFilter,
+                FileType.AllMedia => appSettings.PictureAndVideoFilter,
+                _ => appSettings.AllFileExtensions
             };
-            return result;
+
+            var fileNamesNotProcessed = GetFilesViaPattern(di, pattern, SearchOption.AllDirectories, includeAlreadyProcessed).Select(p => p.FullName);
+            logger.LogInformation("{DirectoryName}: Found {AllCount} {FileType}(s).",
+                di.FullName, fileNamesNotProcessed.Count(), fileType) ; 
+            var fileInfos = fileNamesNotProcessed.Select(p => new FileInfo(p));
+            return fileInfos;
         }
 
-        public IEnumerable<FileInfo> GetFilesViaPattern(DirectoryInfo source, string searchPatterns, SearchOption searchOption)
+        public IEnumerable<FileInfo> GetFilesViaPattern(DirectoryInfo di, string searchPatterns, SearchOption searchOption, bool includeAlreadyProcessed)
         {
-            logger.LogTrace("Looking for FileInfos in {Source}, using the SearchPattern {SearchPattern} and SearchOption {SearchOption}", source.FullName, searchPatterns, searchOption);
+            //TODO should store GetFilesViaPattern in a cache
+            logger.LogTrace("Looking for FileInfos in {Source}, using the SearchPattern {SearchPattern} and SearchOption {SearchOption}", di.FullName, searchPatterns, searchOption);
             if (string.IsNullOrEmpty(searchPatterns))
             {
-                var fileInfos = source.GetFiles(appSettings.AllFileExtensions, searchOption);
-                var files = fileInfos.Select(p => p.FullName).Except(GetExceptionList());
+                var fileInfos = di.GetFiles(appSettings.AllFileExtensions, searchOption);
+                var allFiles = fileInfos.Select(p => p.FullName);
+                var files = includeAlreadyProcessed ? allFiles: allFiles.Except(processedPreviously);
+                logger.Log(files.Any() && !includeAlreadyProcessed ? LogLevel.Information : LogLevel.Debug, "{Directory}: {allCount} Files.{AlreadyProcessed}", di.FullName, allFiles.Count(), includeAlreadyProcessed ? string.Format($" {files.Count()} Files not already processed.") : string.Empty);
                 return fileInfos.Where(p=> files.Contains(p.FullName)); 
             }
             if (searchPatterns.Contains('|'))
             {
-                string[] searchPattern = searchPatterns.Split('|');
+                var searchPattern = searchPatterns.Split('|');
                 List<FileInfo> result = new();
                 for (int i = 0; i < searchPattern.Length; i++)
-                    result.AddRange(GetFilesViaPattern(source, searchPattern[i], searchOption));
+                    result.AddRange(GetFilesViaPattern(di, searchPattern[i], searchOption, includeAlreadyProcessed));
                 return result;
             }
             else
             {
-                var fileInfos = source.GetFiles(searchPatterns, searchOption);
-                var files = fileInfos.Select(p=>p.FullName).Except(GetExceptionList());
+                var fileInfos = di.GetFiles(searchPatterns, searchOption);
+                var allFiles = fileInfos.Select(p => p.FullName);
+                var files = includeAlreadyProcessed ? allFiles : allFiles.Except(processedPreviously);
+                logger.Log(files.Any() && !includeAlreadyProcessed ? LogLevel.Information : LogLevel.Debug, "{Directory}: {allCount} Files.{AlreadyProcessed}", di.FullName, allFiles.Count(), includeAlreadyProcessed ? string.Format($" {files.Count()} Files not already processed.") : string.Empty);
                 return fileInfos.Where(p => files.Contains(p.FullName));
             }
         }

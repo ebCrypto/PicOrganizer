@@ -9,8 +9,9 @@ using Microsoft.Extensions.Configuration;
 
 var config = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-               .AddJsonFile("appsettings-bernard-all.json")
-               //.AddJsonFile("appsettings-emmanuel.json")
+               //.AddJsonFile("appsettings-debug.json")
+               //.AddJsonFile("appsettings-bernard-all.json")
+               .AddJsonFile("appsettings-emmanuel.json")
                .AddEnvironmentVariables()
                .Build();
 var appSettings = config.Get<AppSettings>();
@@ -30,7 +31,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
             .AddSingleton<IFileNameService, FileNameService>()
             .AddSingleton<IDateRecognizerService, DateRecognizerService>()
             .AddSingleton<IFileProviderService, FileProviderService>()
-            .AddSingleton<IRunDataService, RunDataService>()
+            .AddSingleton<IMetaDataService, MetaDataService>()
             .AddSingleton<ITagService, TagService>()
             )
     .UseSerilog()
@@ -52,13 +53,14 @@ static async void DoWork(IServiceProvider services)
     var tagService = provider.GetRequiredService<ITagService>();
     var dirNameService = provider.GetRequiredService<IFileNameService>();
     var fileProviderService = provider.GetRequiredService<IFileProviderService>();
-    var runDataService = provider.GetRequiredService<IRunDataService>();
+    var runDataService = provider.GetRequiredService<IMetaDataService>();
     FileInfo timelineFile = null;
     FileInfo knownLocationsFile = null;
 
     logger.LogInformation("Starting...");
 
     var target = new DirectoryInfo(appSettings.OutputSettings.TargetDirectories.FirstOrDefault());
+    logger.LogInformation("Executing in {Mode} Mode", (AppSettings.Mode)appSettings.InputSettings.Mode);
     if (target.Exists && appSettings.InputSettings.Mode == AppSettings.Mode.Full)
     {
         logger.LogWarning("About to delete {Target}... KILL PROGRAM IF YOU WISH TO ABORT... Or Enter to continue...", target.FullName);
@@ -75,7 +77,7 @@ static async void DoWork(IServiceProvider services)
         if (cleanDirList.Exists)
         {
             dirNameService.LoadCleanDirList(cleanDirList);
-            cleanDirList.CopyTo(Path.Combine(target.FullName, appSettings.OutputSettings.InputBackupFolderName, cleanDirList.Name));
+            cleanDirList.CopyTo(Path.Combine(target.FullName, appSettings.OutputSettings.InputBackupFolderName,DateTime.Now.ToString("yyyyMMdd_HHmmss_") + cleanDirList.Name));
         }
         else
             logger.LogError("cleanDirList file {File} does not exist", cleanDirList.FullName);
@@ -86,7 +88,7 @@ static async void DoWork(IServiceProvider services)
         if (timelineFile.Exists)
         {
             locationService.LoadTimeLine(timelineFile);
-            timelineFile.CopyTo(Path.Combine(target.FullName, appSettings.OutputSettings.InputBackupFolderName, timelineFile.Name));
+            timelineFile.CopyTo(Path.Combine(target.FullName, appSettings.OutputSettings.InputBackupFolderName, DateTime.Now.ToString("yyyyMMdd_HHmmss_") + timelineFile.Name));
         }
         else
             logger.LogError("TimeLine file {File} does not exist", timelineFile.FullName);
@@ -97,7 +99,7 @@ static async void DoWork(IServiceProvider services)
         if (knownLocationsFile.Exists)
         {
             locationService.LoadKnownLocations(knownLocationsFile);
-            knownLocationsFile.CopyTo(Path.Combine(target.FullName, appSettings.OutputSettings.InputBackupFolderName, knownLocationsFile.Name));
+            knownLocationsFile.CopyTo(Path.Combine(target.FullName, appSettings.OutputSettings.InputBackupFolderName, DateTime.Now.ToString("yyyyMMdd_HHmmss_") + knownLocationsFile.Name));
         }
         else
             logger.LogError("KnownLocationsFile file {File} does not exist", knownLocationsFile.FullName);

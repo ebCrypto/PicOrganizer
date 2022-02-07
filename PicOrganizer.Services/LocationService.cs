@@ -44,7 +44,7 @@ namespace PicOrganizer.Services
             if (di.FullName == appSettings.OutputSettings.TargetDirectories.First())
                 lastLocationDetailRun.Add(lw, new ConcurrentDictionary<string, List<ReportDetail>>());
             logger.LogDebug("About to create {Type} Location Report in {Directory}",lw, di.FullName);
-            var topPictures = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.TopDirectoryOnly);
+            var topPictures = fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.TopDirectoryOnly, lw == LocationWriter.FromClosestSameDay);
             var topReportDetails = topPictures.Select(f => GetReportDetail(f)).ToList() ?? new List<ReportDetail>();
             if (topReportDetails.Any())
                 lastLocationDetailRun[lw].AddOrUpdate(di.FullName, topReportDetails, (k,v)=> v);
@@ -179,47 +179,52 @@ namespace PicOrganizer.Services
 
         private async Task AddlocationFromTimeLine(KeyValuePair<string, List<ReportDetail>> dic)
         {
+            if (dic.Key == appSettings.OutputSettings.InvalidJpegFolderName || dic.Key == appSettings.OutputSettings.UnknownDateFolderName)
+                return;
             int count = 0;
             foreach (var picture in dic.Value.Where(p => string.IsNullOrEmpty(p.Latitude) || string.IsNullOrEmpty(p.Longitude)))
             {
-                await AddlocationFromTimeLine(new FileInfo(picture.FullFileName));
-                count++;
+                var result = await AddlocationFromTimeLine(new FileInfo(picture.FullFileName));
+                if (result)
+                    count++;
             }
             logger.LogInformation("Added locations to {Count} files in {Directory} using TimeLine", count, dic.Key);
         }
 
-        private async Task AddlocationFromTimeLine(FileInfo fi)
+        private async Task<bool> AddlocationFromTimeLine(FileInfo fi)
         {
             try
             {
-                if (fi == null || fi.Directory.Name == appSettings.OutputSettings.InvalidJpegFolderName)
-                    return;
+                if (fi == null || fi.Directory.Name == appSettings.OutputSettings.InvalidJpegFolderName || fi.Directory.Name == appSettings.OutputSettings.UnknownDateFolderName)
+                    return false;
                 var imageFile = await ImageFile.FromFileAsync(fi.FullName);
                 var da = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
                 _ = DateTime.TryParse(da?.ToString(), out var dt);
 
                 if (!dateRecognizerService.Valid(dt))
-                    return;
+                    return false;
 
                 var result = GetTimeline().Where(p => p.Start <= dt && p.End >= dt && !string.IsNullOrEmpty(p.Latitude) && !string.IsNullOrEmpty(p.Longitude));
                 if (result == null || !result.Any())
                 {
                     logger.LogWarning("No location found on {Date} using the provided timeline", dt.ToString());
-                    return;
+                    return false;
                 }
                 if (result.Count() > 1)
                 {
                     logger.LogWarning("Multiple locations ({Count}) found on {Date} using the provided timeline", result.Count(), dt.ToString());
-                    return;
+                    return false;
                 }
                 var first = result.First();
                 var latitude = first.Latitude;
                 var longitude = first.Longitude;
                 await SaveCoordinatesToImage(latitude, longitude, fi);
+                return true;
             }
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "unable to add coordinates to {File}", fi.FullName);
+                return false;
             }
         }
 
@@ -290,7 +295,8 @@ namespace PicOrganizer.Services
                 MakeLatitude(c, ef);
                 MakeLongitude(c, ef);
                 await ef.SaveAsync(fi.FullName);
-                logger.LogDebug("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
+                logger.LogTrace("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
+                logger.LogDebug("Added {Coordinates} to {File}", c, fi.FullName);
             }
             catch (Exception ex)
             {

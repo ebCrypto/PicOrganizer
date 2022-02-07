@@ -2,7 +2,7 @@
 {
     public interface IFileProviderService
     {
-        IEnumerable<FileInfo> GetFiles(DirectoryInfo di, FileType fileType);
+        IEnumerable<FileInfo> GetFiles(DirectoryInfo di, FileType fileType, bool getAlreadyProcessed);
 
         enum FileType
         {
@@ -12,9 +12,8 @@
             Picture
         }
 
-        IEnumerable<FileInfo> GetFilesViaPattern(DirectoryInfo source, string searchPatterns, SearchOption searchOption);
+        IEnumerable<FileInfo> GetFilesViaPattern(DirectoryInfo source, string searchPatterns, SearchOption searchOption, bool getAlreadyProcessed);
 
-        IEnumerable<string> GetExceptionList();
-        void SetExceptionList(List<string> except);
+        void SetProcessedPreviously(List<string> except);
     }
 }

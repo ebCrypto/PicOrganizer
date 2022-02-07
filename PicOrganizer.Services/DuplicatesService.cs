@@ -18,10 +18,10 @@ namespace PicOrganizer.Services
             this.fileProviderService = fileProviderService;
         }
 
-        public async Task MoveDuplicates(DirectoryInfo di, DirectoryInfo destination)
+        public async Task MoveDuplicates(DirectoryInfo di, DirectoryInfo duplicateDestination)
         {
             logger.LogDebug("About to look for duplicates in {Directory}", di.FullName);
-            var fileInfos = fileProviderService.GetFilesViaPattern(di,appSettings.PictureAndVideoFilter, SearchOption.TopDirectoryOnly);
+            var fileInfos = fileProviderService.GetFilesViaPattern(di,appSettings.PictureAndVideoFilter, SearchOption.TopDirectoryOnly, true);
             if (fileInfos == null || !fileInfos.Any())
             {
                 logger.LogDebug("No duplicates found in {Directory}", di.FullName);
@@ -49,7 +49,7 @@ namespace PicOrganizer.Services
                                     continue;
                                 logger.LogDebug("Duplicates Found. {File1} & {File2} have the same hash", preExistingFile, fileInfo);
                                 countDuplicates++;
-                                FileInfo keepingFileInfo = MoveDuplicate(preExistingFile, fileInfo, destination);
+                                FileInfo keepingFileInfo = MoveDuplicate(preExistingFile, fileInfo, duplicateDestination);
                                 if (keepingFileInfo != null)
                                     hashes[hash] = keepingFileInfo;
                             }
@@ -60,21 +60,21 @@ namespace PicOrganizer.Services
                 }
                 logger.LogInformation("Looped through {TotalCount} files in {Directory} and found {DuplicateCount} duplicates", topFilesLength.Count, di.FullName, countDuplicates);
             }
-            await di.GetDirectories().ToList().ParallelForEachAsync(MoveDuplicates, destination, appSettings.MaxDop);
+            await di.GetDirectories().ToList().ParallelForEachAsync(MoveDuplicates, duplicateDestination, appSettings.MaxDop);
         }
                                                           
-        private FileInfo MoveDuplicate(FileInfo preExistingFile, FileInfo fileInfo, DirectoryInfo destination)
+        private FileInfo MoveDuplicate(FileInfo preExistingFile, FileInfo fileInfo, DirectoryInfo duplicateDestination)
         {
             try
             {
-                if (!destination.Exists)
-                    destination.Create();
+                if (!duplicateDestination.Exists)
+                    duplicateDestination.Create();
                 var digitPre = preExistingFile.Name.Count(p => Char.IsDigit(p));
                 var digitfileInfo = preExistingFile.Name.Count(p => Char.IsDigit(p));
                 string destFileName;
                 if (digitPre < digitfileInfo)
                 {
-                    destFileName = Path.Combine(destination.FullName, fileInfo.Name);
+                    destFileName = Path.Combine(duplicateDestination.FullName, fileInfo.Name);
                     if (File.Exists(destFileName))
                         fileInfo.Delete();
                     else
@@ -88,7 +88,7 @@ namespace PicOrganizer.Services
                     return preExistingFile;
                 }
 
-                destFileName = Path.Combine(destination.FullName, preExistingFile.Name);
+                destFileName = Path.Combine(duplicateDestination.FullName, preExistingFile.Name);
                 if (File.Exists(destFileName))
                     preExistingFile.Delete();
                 else

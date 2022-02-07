@@ -2,7 +2,7 @@
 
 namespace PicOrganizer.Services
 {
-    public interface IRunDataService
+    public interface IMetaDataService
     {
         void WriteToDisk(DirectoryInfo target);
         void Add(IEnumerable<FileInfo> result, DirectoryInfo di, IFileProviderService.FileType fileType);

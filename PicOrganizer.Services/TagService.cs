@@ -28,7 +28,7 @@ namespace PicOrganizer.Services
             logger.LogInformation("Starting to Create Tag List from pictures in Directory {Directory}", di.FullName); 
             Tags = new ConcurrentBag<string>();
             Parallel.ForEach(
-                fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories),
+                fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories, false),
                 parallelOptions,
                 f => AddToTagList(f, di))
                 ;
@@ -55,7 +55,7 @@ namespace PicOrganizer.Services
         {
             logger.LogInformation("Starting to tag pictures in Directory {Directory}", di.FullName);
             Parallel.ForEach(
-               fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories),
+               fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories, false),
                parallelOptions,
                async f => await AddRelevantTagsToFile(f, di))
                ;

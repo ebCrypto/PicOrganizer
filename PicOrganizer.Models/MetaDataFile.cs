@@ -14,6 +14,11 @@
             }
         }
 
+        // for desiarlization purposes
+        public MetaDataFile()
+        {
+        }
+
         public string Name { get; set; }
         public string FullName { get; set; }
         public long Length { get; set; }

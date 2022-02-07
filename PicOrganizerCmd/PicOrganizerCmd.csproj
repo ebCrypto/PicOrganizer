@@ -30,6 +30,9 @@
     <None Update="appSettings-bernard-diapos.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="appSettings-debug.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="appSettings-emmanuel.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

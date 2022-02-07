@@ -8,7 +8,8 @@
             OutputSettings = new Outputs();
         }
 
-        public string PictureFilter { get { return PictureExtensions == null ? string.Empty : string.Join("|", PictureExtensions?.Select(p => string.Format($"*{p}"))); } }
+        public string VideoFilter { get { return VideoExtensions == null ? string.Empty : string.Join("|", VideoExtensions.Select(p => string.Format($"*{p}"))); } }
+        public string PictureFilter { get { return PictureExtensions == null ? string.Empty : string.Join("|", PictureExtensions.Select(p => string.Format($"*{p}"))); } }
         public string PictureAndVideoFilter { get { return PictureExtensions == null ? string.Empty : string.Join("|", PictureExtensions.Union(VideoExtensions).Select(p => string.Format($"*{p}"))); } }
         public string[] PictureExtensions { get; set; }
         public string[] VideoExtensions { get; set; }

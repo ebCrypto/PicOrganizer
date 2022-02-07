@@ -13,10 +13,10 @@ namespace PicOrganizer.Services
         private readonly IFileNameService fileNameService;
         private readonly IDateRecognizerService dateRecognizerService;
         private readonly IFileProviderService fileProviderService;
-        private readonly IRunDataService runDataService;
+        private readonly IMetaDataService runDataService;
         private readonly ParallelOptions parallelOptions;
 
-        public CopyDigitalMediaService(AppSettings appSettings, ILogger<CopyDigitalMediaService> logger, IFileNameService fileNameService, IDateRecognizerService dateRecognizerService, IFileProviderService fileProviderService, IRunDataService runDataService)
+        public CopyDigitalMediaService(AppSettings appSettings, ILogger<CopyDigitalMediaService> logger, IFileNameService fileNameService, IDateRecognizerService dateRecognizerService, IFileProviderService fileProviderService, IMetaDataService runDataService)
         {
             this.appSettings = appSettings;
             this.logger = logger;
@@ -32,20 +32,20 @@ namespace PicOrganizer.Services
             var froms = appSettings.InputSettings.SourceFolders?.Where(p => !string.IsNullOrEmpty(p)).Select(p => new DirectoryInfo(p)).ToArray();
             if (froms == null || froms.Length == 0)
             {
-                logger.LogError("Unable to find sources");
+                logger.LogError("Unable to find any source directories");
                 return;
             }
             foreach (var from in froms)
             {
-                await Copy(from, to, IFileProviderService.FileType.Video);
-                await Copy(from, to, IFileProviderService.FileType.Picture);
+                await AddMetaAndCopy(from, to, IFileProviderService.FileType.Video);
+                await AddMetaAndCopy(from, to, IFileProviderService.FileType.Picture);
             }
         }
 
-        private async Task Copy(DirectoryInfo from, DirectoryInfo to, IFileProviderService.FileType fileType)
+        private async Task AddMetaAndCopy(DirectoryInfo from, DirectoryInfo to, IFileProviderService.FileType fileType)
         {
-            logger.LogInformation("About to Copy {FileType}(s) from {Source}...", fileType, from.FullName);
-            var medias = fileProviderService.GetFiles(from, fileType);
+            logger.LogDebug("About to Copy {FileType}(s) from {Source}...", fileType, from.FullName);
+            var medias = fileProviderService.GetFiles(from, fileType, false);
             logger.LogDebug("Found {Count} {FileType}(s) in {From}", medias.Count(), fileType, from);
             runDataService.Add(medias, from, fileType); //TODO remove files with errors
             await medias.ParallelForEachAsync(fileType == IFileProviderService.FileType.Video? CopyOneVideo:CopyOnePicture, to, appSettings.MaxDop);
@@ -131,7 +131,7 @@ namespace PicOrganizer.Services
                                             new DirectoryInfo(Path.Combine(to.FullName, sourceWhatsapp ? appSettings.OutputSettings.WhatsappFolderName : string.Empty, destination)):
                                             new DirectoryInfo(Path.Combine(to.FullName, destination));
 
-                await Copy(fileInfo, targetDirectory, dateInferred);
+                await AddMetaAndCopy(fileInfo, targetDirectory, dateInferred);
             }
             catch (Exception ex)
             {
@@ -157,7 +157,7 @@ namespace PicOrganizer.Services
             }
         }
 
-        private async Task Copy(FileInfo fileInfo, DirectoryInfo targetDirectory, DateTime dateInferred)
+        private async Task AddMetaAndCopy(FileInfo fileInfo, DirectoryInfo targetDirectory, DateTime dateInferred)
         {
             if (!targetDirectory.Exists)
             {
@@ -197,7 +197,7 @@ namespace PicOrganizer.Services
                 return;
             foreach (var target in targets.Skip(1))
             {
-                logger.LogInformation("about to copy files and directories from {Source} to {Destination}", targets[0], target);
+                logger.LogInformation("About to copy files and directories from {Source} to {Destination}", targets[0], target);
                 CopyAll(targets[0], target);
                 logger.LogInformation("Done copying files and directories from {Source} to {Destination}", targets[0], target);
             }
