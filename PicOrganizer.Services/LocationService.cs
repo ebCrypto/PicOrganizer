@@ -1,12 +1,9 @@
-﻿using CoordinateSharp;
-using CsvHelper;
-using ExifLibrary;
+﻿using CsvHelper;
 using Microsoft.Extensions.Logging;
 using Models;
 using PicOrganizer.Models;
 using System.Collections.Concurrent;
 using System.Globalization;
-using System.Linq;
 using static PicOrganizer.Services.ILocationService;
 
 namespace PicOrganizer.Services
@@ -84,33 +81,29 @@ namespace PicOrganizer.Services
                 return r;
             try
             {
-                ImageFile imageFile;
-                ExifProperty da;
-                DateTime dt = DateTime.MinValue;
-                GPSLatitudeLongitude latTag;
-                GPSLatitudeLongitude longTag;
-                try
-                {
-                    imageFile = ImageFile.FromFile(fileInfo.FullName);
-                    da = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
-                    _ = DateTime.TryParse(da?.ToString(), out dt);
-                    latTag = imageFile.Properties.Get<GPSLatitudeLongitude>(ExifTag.GPSLatitude);
-                    longTag = imageFile.Properties.Get<GPSLatitudeLongitude>(ExifTag.GPSLongitude);
+                //try
+                //{
+                    var imageFile = new CompactExifLib.ExifData(fileInfo.FullName);
+                    imageFile.GetDateTaken(out DateTime dt);
+
+                    imageFile.GetGpsLatitude(out var latTag);
+                    imageFile.GetGpsLongitude(out var longTag);
+
                     r.DateTime = dt;
-                    if (!IsNullOrZero(latTag) && !IsNullOrZero(longTag)) // very unlikely for a location to be 0.0;0.0 as it is in the Atlantic 
+                    if (!IsZero(latTag) && !IsZero(longTag)) // very unlikely for a legit location to be 0.0;0.0 as it is in the Atlantic 
                     {
-                        r.Latitude = latTag?.ToString();
-                        r.Longitude = longTag?.ToString();
+                        r.Latitude = PrintCoordinate(latTag);
+                        r.Longitude = PrintCoordinate(longTag);
                     }
-                }
-                catch (NotValidJPEGFileException e)
-                {
-                    logger.LogWarning("{File} invalid JPEG {Message}", fileInfo.FullName, e.Message);
-                }
-                catch (NotValidImageFileException e)
-                {
-                    logger.LogWarning("{File} invalid image {Message}", fileInfo.FullName, e.Message);
-                }
+                //}
+                //catch (NotValidJPEGFileException e)
+                //{
+                //    logger.LogWarning("{File} invalid JPEG {Message}", fileInfo.FullName, e.Message);
+                //}
+                //catch (NotValidImageFileException e)
+                //{
+                //    logger.LogWarning("{File} invalid image {Message}", fileInfo.FullName, e.Message);
+                //}
             }
             catch (Exception ex)
             {
@@ -119,13 +112,15 @@ namespace PicOrganizer.Services
             return r;
         }
 
-        private static bool IsNullOrZero(GPSLatitudeLongitude latTag)
+        private static string PrintCoordinate(CompactExifLib.GeoCoordinate c)
         {
-            if (latTag == null)
-                return true;
-            if (latTag.Degrees.Numerator == 0 && latTag.Minutes.Numerator == 0 && latTag.Seconds.Numerator == 0)
-                return true;
-            return false;
+            // N 55º 40' 35.883"
+            return string.Format($"{c.CardinalPoint} {c.Degree}º {c.Minute}' {c.Second}\"");
+        }
+
+        private static bool IsZero(CompactExifLib.GeoCoordinate latTag)
+        {
+            return latTag.Degree == 0 && latTag.Minute == 0 && latTag.Second == 0;
         }
 
         public async Task WriteLocation(DirectoryInfo di, LocationWriter lw)
@@ -142,7 +137,7 @@ namespace PicOrganizer.Services
 
                         if (lastLocationDetailRun.ContainsKey(lw))
                             foreach (var report in lastLocationDetailRun[lw])
-                                await WriteLocationFromClosestKnownIfSameDay(report);
+                                WriteLocationFromClosestKnownIfSameDay(report);
                         //Parallel.ForEach(lastLocationDetailRun[lw], parallelOptions, async report => await WriteLocationFromClosestKnownIfSameDay(report.Value));
                         else
                             logger.LogWarning("Unable to report missing locations.");
@@ -197,9 +192,8 @@ namespace PicOrganizer.Services
             {
                 if (fi == null || fi.Directory.Name == appSettings.OutputSettings.InvalidJpegFolderName || fi.Directory.Name == appSettings.OutputSettings.UnknownDateFolderName)
                     return false;
-                var imageFile = await ImageFile.FromFileAsync(fi.FullName);
-                var da = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
-                _ = DateTime.TryParse(da?.ToString(), out var dt);
+                var imageFile = new CompactExifLib.ExifData (fi.FullName);
+                imageFile.GetDateTaken(out DateTime dt);
 
                 if (!dateRecognizerService.Valid(dt))
                     return false;
@@ -243,9 +237,7 @@ namespace PicOrganizer.Services
                     if (picture.FullFileName.Contains(knownLocation.NameInFile))
                     {
                         logger.LogTrace("Will write location ({Latitude} {Longitude}) from {From} to {To}", knownLocation.Latitude, knownLocation.Longitude, knownLocation.ActualLocation, picture.FullFileName);
-                        double.TryParse(knownLocation.Latitude, out var lat);
-                        double.TryParse(knownLocation.Longitude, out var lon);
-                        await SaveCoordinatesToImage(lat, lon, new FileInfo(picture.FullFileName));
+                        await SaveCoordinatesToImage(knownLocation.Latitude, knownLocation.Longitude, new FileInfo(picture.FullFileName));
                         count++;
                     }
                 } 
@@ -253,7 +245,7 @@ namespace PicOrganizer.Services
             logger.LogInformation("Added locations to {Count} files in {Directory} using FileName", count, dic.Key);
         }
 
-        private async Task WriteLocationFromClosestKnownIfSameDay(KeyValuePair<string, List<ReportDetail>> dic)
+        private void WriteLocationFromClosestKnownIfSameDay(KeyValuePair<string, List<ReportDetail>> dic)
         {
             int count = 0;
             var reportDetails = dic.Value;
@@ -270,7 +262,7 @@ namespace PicOrganizer.Services
                 if (picKnownLoc != null)
                 {
                     logger.LogTrace("Will copy location ({Latitude} {Longitude}) from {From} to {To}", picKnownLoc.Latitude, picKnownLoc.Longitude, picKnownLoc.FullFileName, picture.FullFileName);
-                    await SaveDMSCoordinatesToImage(picKnownLoc.Latitude, picKnownLoc.Longitude, new FileInfo(picture.FullFileName));
+                    CopyGpsData(new FileInfo(picKnownLoc.FullFileName), new FileInfo(picture.FullFileName));
                     count++;
                 }
                 else
@@ -279,100 +271,54 @@ namespace PicOrganizer.Services
             logger.LogInformation("Added locations to {Count} files in {Directory} using SameDayKnownLocation", count, dic.Key);
         }
 
-        public async Task SaveCoordinatesToImage(string latitude, string longitude, FileInfo fi)
+        private void CopyGpsData(FileInfo source, FileInfo target)
         {
-            await SaveCoordinatesToImage(Convert.ToDouble(latitude), Convert.ToDouble(longitude), fi);
+            try
+            {
+                var src = new CompactExifLib.ExifData(source.FullName);
+                var tgt = new CompactExifLib.ExifData(target.FullName);
+
+                src.GetGpsLatitude(out var lat);
+                src.GetGpsLongitude(out var lon);
+                src.GetGpsAltitude(out var alt);
+
+                tgt.SetGpsLatitude(lat);
+                tgt.SetGpsLongitude(lon);
+                tgt.SetGpsAltitude(alt);
+
+                tgt.Save();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unable to copy GPS data from {Source} to {Target}", source, target);
+            }
         }
 
-        public async Task SaveCoordinatesToImage(double latitude, double longitude, FileInfo fi)
+        public async Task SaveCoordinatesToImage(string latitude, string longitude, FileInfo fi)
+        {
+            decimal.TryParse(latitude, out var lat);
+            decimal.TryParse(longitude, out var lon);
+            await SaveCoordinatesToImage(lat, lon, fi);
+        }
+
+        public async Task SaveCoordinatesToImage(decimal latitude, decimal longitude, FileInfo fi)
         {
             if (fi == null || fi.Directory == null || fi.Directory.Name == appSettings.OutputSettings.InvalidJpegFolderName)
                 return;
             try
             {
-                var ef = await ImageFile.FromFileAsync(fi.FullName);
-                var c = new Coordinate(latitude, longitude, DateTime.Today);
-                MakeLatitude(c, ef);
-                MakeLongitude(c, ef);
-                await ef.SaveAsync(fi.FullName);
-                logger.LogTrace("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
-                logger.LogDebug("Added {Coordinates} to {File}", c, fi.FullName);
+                var tgt = new CompactExifLib.ExifData(fi.FullName);
+
+                tgt.SetGpsLatitude(CompactExifLib.GeoCoordinate.FromDecimal(latitude, true));
+                tgt.SetGpsLongitude(CompactExifLib.GeoCoordinate.FromDecimal(longitude, false)); 
+
+                tgt.Save();
+                logger.LogDebug("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
             }
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "unable to add Float coordinates to {File}", fi.FullName);
             }
-        }
-
-        public async Task SaveDMSCoordinatesToImage(string latitude, string longitude, FileInfo fi)
-        {
-            try
-            {
-                var ef = await ImageFile.FromFileAsync(fi.FullName);
-                MakeLatitude(latitude, ef);
-                MakeLongitude(longitude, ef);
-                await ef.SaveAsync(fi.FullName);
-                logger.LogDebug("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "unable to add DMS coordinates to {File}", fi.FullName);
-            }
-        }
-
-        public void MakeLongitude(Coordinate coordinate, ImageFile ef)
-        {
-            string lon = coordinate.Longitude.ToString();
-            MakeLongitude(lon, ef);
-        }
-
-        private static void MakeLongitude(string lon, ImageFile ef)
-        {
-            if (string.IsNullOrEmpty(lon))
-                return;
-            var items = lon.Replace("°", " ").Replace("º", " ").Replace("'", " ").Replace("\"", " ").Split(" ", StringSplitOptions.RemoveEmptyEntries);
-
-            if (lon.StartsWith("W") || lon.StartsWith("E"))
-            {
-                ef.Properties.Set(ExifTag.GPSLongitude, GetFloat(items[1]), GetFloat(items[2]), GetFloat(items[3]));
-                ef.Properties.Set(ExifTag.GPSLongitudeRef, items[0] == "E" ? GPSLongitudeRef.East : GPSLongitudeRef.West);
-            }
-            else
-            {
-                ef.Properties.Set(ExifTag.GPSLongitude, GetFloat(items[0]), GetFloat(items[1]), GetFloat(items[2]));
-                ef.Properties.Set(ExifTag.GPSLongitudeRef, GetFloat(items[0]) < 0? GPSLongitudeRef.East : GPSLongitudeRef.West);
-            }
-        }
-
-        public void MakeLatitude(Coordinate coordinate, ImageFile ef)
-        {
-            // N 55º 40' 35.883"
-            string lat = coordinate.Latitude.ToString();
-            MakeLatitude(lat,ef);
-        }
-
-        private static void MakeLatitude(string lat,ImageFile ef)
-        {
-            if (string.IsNullOrEmpty(lat))
-                return;
-            
-            var items = lat.Replace("°", " ").Replace("º", " ").Replace("'", " ").Replace("\"", " ").Split(" ", StringSplitOptions.RemoveEmptyEntries);
-
-            if (lat.StartsWith("N") || lat.StartsWith("S"))
-            {
-                ef.Properties.Set(ExifTag.GPSLatitude, GetFloat(items[1]), GetFloat(items[2]), GetFloat(items[3]));
-                ef.Properties.Set(ExifTag.GPSLatitudeRef, items[0] == "N" ? GPSLatitudeRef.North : GPSLatitudeRef.South);
-            }
-            else
-            {
-                ef.Properties.Set(ExifTag.GPSLatitude, GetFloat(items[0]), GetFloat(items[1]), GetFloat(items[2]));
-                ef.Properties.Set(ExifTag.GPSLatitudeRef, GetFloat(items[0]) > 0 ? GPSLatitudeRef.North : GPSLatitudeRef.South);
-            }
-        }
-
-        private static float GetFloat(string s)
-        {
-            return Convert.ToSingle(s);
         }
 
         public void LoadTimeLine(FileInfo csv)

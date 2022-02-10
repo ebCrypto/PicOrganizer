@@ -1,5 +1,4 @@
-﻿using ExifLibrary;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using PicOrganizer.Models;
 using System.Collections.Concurrent;
 using System.Text;
@@ -71,17 +70,16 @@ namespace PicOrganizer.Services
                     logger.LogTrace("Skiping invalid file {File}", f.FullName);
                     return;
                 }
-                ImageFile imageFile;
-                imageFile = await ImageFile.FromFileAsync(f.FullName);
-                var existingTags = (string)imageFile.Properties.Get(ExifTag.WindowsKeywords)?.Value;
-                var existingTagArray = !string.IsNullOrEmpty(existingTags) && existingTags.Contains(';') ? existingTags.Split(";").ToList() : new List<string>() ;
-                var words = MakeWordList(f, rootToIgnore);
-                var relevantTags = Tags.Intersect(words).Intersect(existingTagArray);
+                //CompactExifLib.ExifData imageFile = new(f.FullName);
+                //imageFile.GetTagValue(out var existingTags);
+                //var existingTagArray = !string.IsNullOrEmpty(existingTags) && existingTags.Contains(';') ? existingTags.Split(";").ToList() : new List<string>() ;
+                //var words = MakeWordList(f, rootToIgnore);
+                //var relevantTags = Tags.Intersect(words).Intersect(existingTagArray);
                 
-                string tagString = string.Join(";", relevantTags);
-                imageFile.Properties.Set(ExifTag.WindowsKeywords, tagString);
-                await imageFile.SaveAsync(f.FullName);
-                logger.LogTrace("Added tags {Tags} to file {File}",tagString, f.FullName);
+                //string tagString = string.Join(";", relevantTags);
+                //imageFile.SetTagValue(tagString);
+                //await imageFile.Save();
+                //logger.LogTrace("Added tags {Tags} to file {File}",tagString, f.FullName);
             }
             catch (Exception ex)
             {

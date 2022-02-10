@@ -128,8 +128,8 @@ static async void DoWork(IServiceProvider services)
         await locationService.WriteLocation(target, LocationWriter.FromTimeline);
     locationService.ReportMissing(target, LocationWriter.After);
 
-    tagService.CreateTags(target);
-    tagService.AddRelevantTagsToFiles(target);
+    //tagService.CreateTags(target);
+    //tagService.AddRelevantTagsToFiles(target);
 
     runDataService.WriteToDisk(target);
 

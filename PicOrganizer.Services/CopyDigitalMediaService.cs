@@ -1,6 +1,4 @@
-﻿using ExifLibrary;
-using System.Linq;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using PicOrganizer.Models;
 using System.Text.RegularExpressions;
 
@@ -91,16 +89,14 @@ namespace PicOrganizer.Services
                     return;
                 }
                 logger.LogTrace("Processing {File}", fileInfo.FullName);
-                ImageFile imageFile = null;
+                CompactExifLib.ExifData imageFile = null;
                 string destination = appSettings.OutputSettings.UnkownFolderName;
                 DateTime dateTimeOriginal = DateTime.MinValue;
                 DateTime dateInferred = DateTime.MinValue;
                 try
                 {
-                    imageFile = await GetImageFile(fileInfo);
-                    ExifProperty? tag;
-                    tag = imageFile.Properties.Get(ExifTag.DateTimeOriginal);
-                    _ = DateTime.TryParse(tag?.ToString(), out dateTimeOriginal);
+                    imageFile = GetImageFileWithRetries(fileInfo, appSettings.InputSettings.RetryAttempts);
+                    imageFile.GetDateTaken( out dateTimeOriginal);
                     string cleanFolderName = fileNameService.CleanName(fileInfo.Directory?.Name);
                     if (!dateRecognizerService.Valid(dateTimeOriginal) || cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned))
                         dateInferred = dateRecognizerService.InferDateFromName(fileInfo.Name);
@@ -112,15 +108,15 @@ namespace PicOrganizer.Services
                     DateTime folderDate = !dateRecognizerService.Valid(dateInferred) ? dateTimeOriginal : dateInferred;
                     destination = folderDate != DateTime.MinValue ? Path.Combine(appSettings.OutputSettings.PicturesFolderName, fileNameService.MakeDirectoryName(folderDate)) : appSettings.OutputSettings.UnknownDateFolderName;
                 }
-                catch (NotValidJPEGFileException)
-                {
-                    destination = appSettings.OutputSettings.InvalidJpegFolderName;
-                }
-                catch (NotValidImageFileException)
-                {
-                    logger.LogDebug("NotValidImageFileException encoutered, will not process DateTaken for {File} ", fileInfo.Name);
-                    destination = appSettings.OutputSettings.InvalidJpegFolderName;
-                }
+                //catch (NotValidJPEGFileException)
+                //{
+                //    destination = appSettings.OutputSettings.InvalidJpegFolderName;
+                //}
+                //catch (NotValidImageFileException)
+                //{
+                //    logger.LogDebug("NotValidImageFileException encoutered, will not process DateTaken for {File} ", fileInfo.Name);
+                //    destination = appSettings.OutputSettings.InvalidJpegFolderName;
+                //}
                 catch (IOException e)
                 {
                     logger.LogWarning(e, "Unable to get file {File}", fileInfo.Name);
@@ -131,7 +127,7 @@ namespace PicOrganizer.Services
                                             new DirectoryInfo(Path.Combine(to.FullName, sourceWhatsapp ? appSettings.OutputSettings.WhatsappFolderName : string.Empty, destination)):
                                             new DirectoryInfo(Path.Combine(to.FullName, destination));
 
-                await AddMetaAndCopy(fileInfo, targetDirectory, dateInferred);
+                AddMetaAndCopy(fileInfo, targetDirectory, dateInferred);
             }
             catch (Exception ex)
             {
@@ -139,11 +135,11 @@ namespace PicOrganizer.Services
             }
         }
 
-        private async Task<ImageFile> GetImageFile(FileInfo fileInfo, int retryAttemptLeft = 2)
+        private CompactExifLib.ExifData GetImageFileWithRetries(FileInfo fileInfo, int retryAttemptLeft = 2)
         {
             try
             {
-                return await ImageFile.FromFileAsync(fileInfo.FullName);
+                return new CompactExifLib.ExifData(fileInfo.FullName);
             }
             catch (IOException e)
             {
@@ -151,13 +147,13 @@ namespace PicOrganizer.Services
                 {
                     logger.LogTrace(e, "Unable to get image {File} attempts: {Attempt}", fileInfo.FullName, retryAttemptLeft);
                     if (retryAttemptLeft > 0)
-                        return await GetImageFile(fileInfo, retryAttemptLeft - 1);
+                        return GetImageFileWithRetries(fileInfo, retryAttemptLeft - 1);
                 }
                 throw e;
             }
         }
 
-        private async Task AddMetaAndCopy(FileInfo fileInfo, DirectoryInfo targetDirectory, DateTime dateInferred)
+        private void AddMetaAndCopy(FileInfo fileInfo, DirectoryInfo targetDirectory, DateTime dateInferred)
         {
             if (!targetDirectory.Exists)
             {
@@ -171,9 +167,9 @@ namespace PicOrganizer.Services
             {
                 try
                 {
-                    var imageFile = await ImageFile.FromFileAsync(destFileName);
-                    imageFile.Properties.Set(ExifTag.DateTimeOriginal, new ExifDateTime(ExifTag.DateTimeOriginal, dateInferred));
-                    await imageFile.SaveAsync(destFileName);
+                    var imageFile = new CompactExifLib.ExifData(destFileName);
+                    imageFile.SetDateTaken(dateInferred);
+                    imageFile.Save();
                     logger.LogDebug("Added date {Date} to file {File}", dateInferred.ToString(), destFileName);
                 }
                 catch (Exception e)

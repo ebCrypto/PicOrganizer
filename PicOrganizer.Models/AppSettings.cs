@@ -54,6 +54,7 @@
             public string Scanned { get; set; }
             public Mode Mode { get; set; } 
             public string Culture { get; set; }
+            public int RetryAttempts { get; set; }
         }
 
         public enum Mode

@@ -37,7 +37,7 @@ namespace PicOrganizer.Services
                     metaDataRun = JsonSerializer.Deserialize<MetaDataRun>(data);
                     metaDataRun.Id = Guid.NewGuid();
                     metaDataRun.startTime = DateTimeOffset.Now;
-                    fileProviderService.SetProcessedPreviously(metaDataRun.Folders.SelectMany(p => p.Value.Files.Select(q => q.FullName)).ToList());
+                    fileProviderService.SetProcessedPreviously(metaDataRun.Folders.SelectMany(p => p.Value.Files.Select(q => q.Value.FullName)).ToList());
                     logger.LogInformation("using meta found in {File}", metaFile.FullName);
                 }
                 catch (Exception ex)
@@ -71,18 +71,23 @@ namespace PicOrganizer.Services
         {
             if (!result.Any())
                 return;
+            var files = result.Where(q => q != null).Select(p => new MetaDataFile(p));
             MetaDataFolder folder = new()
             {
                 Name = di.Name,
                 FullName = di.FullName,
-                Files = result.Where(q => q != null).Select(
-                                        p => new MetaDataFile(p)
-                                    )
+                Files = files.ToDictionary(p => p.FullName,p=> p)
             };
             if (!metaDataRun.Folders.ContainsKey(di.FullName))
                 metaDataRun.Folders.Add(di.FullName, folder);
             else
-                metaDataRun.Folders[di.FullName].Files = metaDataRun.Folders[di.FullName].Files.Union(folder.Files).Distinct();
+            {
+                foreach (var file in files)
+                {
+                    if (!metaDataRun.Folders[di.FullName].Files.ContainsKey(file.FullName))
+                        metaDataRun.Folders[di.FullName].Files.Add(file.FullName, file);
+                }
+            }
         }
     }
 }

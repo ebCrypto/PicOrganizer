@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PicOrganizer.Models", "PicO
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PicOrganizer.Tests", "PicOrganizer.Tests\PicOrganizer.Tests.csproj", "{D0821D91-7196-4507-A573-404EE8E1553A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompactExifData", "CompactExifData\CompactExifData.csproj", "{8E2B90DA-B2AE-4B76-A38C-E0113412B535}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{D0821D91-7196-4507-A573-404EE8E1553A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D0821D91-7196-4507-A573-404EE8E1553A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D0821D91-7196-4507-A573-404EE8E1553A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8E2B90DA-B2AE-4B76-A38C-E0113412B535}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E2B90DA-B2AE-4B76-A38C-E0113412B535}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8E2B90DA-B2AE-4B76-A38C-E0113412B535}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8E2B90DA-B2AE-4B76-A38C-E0113412B535}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
