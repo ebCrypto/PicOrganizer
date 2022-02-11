@@ -9,9 +9,9 @@ using Microsoft.Extensions.Configuration;
 
 var config = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-               //.AddJsonFile("appsettings-debug.json")
+               .AddJsonFile("appsettings-debug.json")
                //.AddJsonFile("appsettings-bernard-all.json")
-               .AddJsonFile("appsettings-emmanuel.json")
+               //.AddJsonFile("appsettings-emmanuel.json")
                .AddEnvironmentVariables()
                .Build();
 var appSettings = config.Get<AppSettings>();
@@ -128,8 +128,8 @@ static async void DoWork(IServiceProvider services)
         await locationService.WriteLocation(target, LocationWriter.FromTimeline);
     locationService.ReportMissing(target, LocationWriter.After);
 
-    //tagService.CreateTags(target);
-    //tagService.AddRelevantTagsToFiles(target);
+    tagService.CreateTags(target);
+    tagService.AddRelevantTagsToFiles(target);
 
     runDataService.WriteToDisk(target);
 

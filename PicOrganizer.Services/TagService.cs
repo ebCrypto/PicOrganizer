@@ -20,17 +20,19 @@ namespace PicOrganizer.Services
             parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = appSettings.MaxDop };
         }
 
-        public ConcurrentBag<string> Tags { get; private set; }
+        public IEnumerable<string> Tags { get; private set; }
 
         public void CreateTags(DirectoryInfo di)
         {
-            logger.LogInformation("Starting to Create Tag List from pictures in Directory {Directory}", di.FullName); 
-            Tags = new ConcurrentBag<string>();
+            logger.LogInformation("Starting to Create Tag List from picture names in Directory {Directory}", di.FullName); 
+            var tags = new ConcurrentBag<string>();
             Parallel.ForEach(
                 fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories, false),
                 parallelOptions,
-                f => AddToTagList(f, di))
+                f => AddToTagList(f, di, tags))
                 ;
+            Tags = tags.Distinct();
+            logger.LogInformation("Found {Count} unique Tags", Tags.Count());
         }
 
         private List<string> MakeWordList(FileInfo f, DirectoryInfo rootToIgnore)
@@ -44,10 +46,10 @@ namespace PicOrganizer.Services
             return new List<string>();
         }
 
-        private void AddToTagList(FileInfo f, DirectoryInfo rootToIgnore)
+        private void AddToTagList(FileInfo f, DirectoryInfo rootToIgnore, ConcurrentBag<string> tags)
         {
             var words = MakeWordList(f, rootToIgnore);
-            Parallel.ForEach(words, parallelOptions, item => Tags.Add(item.ToLowerInvariant()));
+            Parallel.ForEach(words, parallelOptions, item => tags.Add(item.ToLowerInvariant()));
         }
 
         public void AddRelevantTagsToFiles(DirectoryInfo di)
@@ -70,16 +72,20 @@ namespace PicOrganizer.Services
                     logger.LogTrace("Skiping invalid file {File}", f.FullName);
                     return;
                 }
-                //CompactExifLib.ExifData imageFile = new(f.FullName);
-                //imageFile.GetTagValue(out var existingTags);
-                //var existingTagArray = !string.IsNullOrEmpty(existingTags) && existingTags.Contains(';') ? existingTags.Split(";").ToList() : new List<string>() ;
-                //var words = MakeWordList(f, rootToIgnore);
-                //var relevantTags = Tags.Intersect(words).Intersect(existingTagArray);
-                
-                //string tagString = string.Join(";", relevantTags);
-                //imageFile.SetTagValue(tagString);
-                //await imageFile.Save();
-                //logger.LogTrace("Added tags {Tags} to file {File}",tagString, f.FullName);
+                CompactExifLib.ExifData imageFile = new(f.FullName);
+                imageFile.GetTagValue(CompactExifLib.ExifTag.XpKeywords, out string existingTags, CompactExifLib.StrCoding.Utf16Le_Byte);
+                var existingTagArray = !string.IsNullOrEmpty(existingTags) && existingTags.Contains(';') ? existingTags.Split(";").ToList() : new List<string>();
+                var words = MakeWordList(f, rootToIgnore);
+                var relevantTags = Tags.Intersect(words).Union(existingTagArray);
+
+                string tagString = string.Join(";", relevantTags);
+                if (tagString != existingTags)
+                {
+                    imageFile.SetTagValue(CompactExifLib.ExifTag.XpKeywords, tagString, CompactExifLib.StrCoding.Utf16Le_Byte);
+                    imageFile.Save();
+                    logger.LogDebug("{File} Keywords {Old} -> {New}", f.FullName, existingTags, tagString);
+                }
+                logger.LogTrace("file {File} tags {Tags} were not changed", tagString, f.FullName);
             }
             catch (Exception ex)
             {
