@@ -1,4 +1,5 @@
-﻿using CsvHelper;
+﻿using CompactExifLib;
+using CsvHelper;
 using Microsoft.Extensions.Logging;
 using Models;
 using PicOrganizer.Models;
@@ -83,7 +84,7 @@ namespace PicOrganizer.Services
             {
                 //try
                 //{
-                    var imageFile = new CompactExifLib.ExifData(fileInfo.FullName);
+                    var imageFile = new ExifData(fileInfo.FullName);
                     imageFile.GetDateTaken(out DateTime dt);
 
                     imageFile.GetGpsLatitude(out var latTag);
@@ -107,18 +108,18 @@ namespace PicOrganizer.Services
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "{ExceptionMessage} {FileName}", ex.Message, fileInfo.Name);
+                logger.LogError(ex, "Can't GetReortDetail {FileName}", fileInfo.Name);
             } 
             return r;
         }
 
-        private static string PrintCoordinate(CompactExifLib.GeoCoordinate c)
+        private static string PrintCoordinate(GeoCoordinate c)
         {
             // N 55º 40' 35.883"
             return string.Format($"{c.CardinalPoint} {c.Degree}º {c.Minute}' {c.Second}\"");
         }
 
-        private static bool IsZero(CompactExifLib.GeoCoordinate latTag)
+        private static bool IsZero(GeoCoordinate latTag)
         {
             return latTag.Degree == 0 && latTag.Minute == 0 && latTag.Second == 0;
         }
@@ -192,7 +193,7 @@ namespace PicOrganizer.Services
             {
                 if (fi == null || fi.Directory.Name == appSettings.OutputSettings.InvalidJpegFolderName || fi.Directory.Name == appSettings.OutputSettings.UnknownDateFolderName)
                     return false;
-                var imageFile = new CompactExifLib.ExifData (fi.FullName);
+                var imageFile = new ExifData (fi.FullName);
                 imageFile.GetDateTaken(out DateTime dt);
 
                 if (!dateRecognizerService.Valid(dt))
@@ -275,8 +276,8 @@ namespace PicOrganizer.Services
         {
             try
             {
-                var src = new CompactExifLib.ExifData(source.FullName);
-                var tgt = new CompactExifLib.ExifData(target.FullName);
+                var src = new ExifData(source.FullName);
+                var tgt = new ExifData(target.FullName);
 
                 src.GetGpsLatitude(out var lat);
                 src.GetGpsLongitude(out var lon);
@@ -298,19 +299,19 @@ namespace PicOrganizer.Services
         {
             decimal.TryParse(latitude, out var lat);
             decimal.TryParse(longitude, out var lon);
-            await SaveCoordinatesToImage(lat, lon, fi);
+            SaveCoordinatesToImage(lat, lon, fi);
         }
 
-        public async Task SaveCoordinatesToImage(decimal latitude, decimal longitude, FileInfo fi)
+        public void SaveCoordinatesToImage(decimal latitude, decimal longitude, FileInfo fi)
         {
             if (fi == null || fi.Directory == null || fi.Directory.Name == appSettings.OutputSettings.InvalidJpegFolderName)
                 return;
             try
             {
-                var tgt = new CompactExifLib.ExifData(fi.FullName);
+                var tgt = new ExifData(fi.FullName);
 
-                tgt.SetGpsLatitude(CompactExifLib.GeoCoordinate.FromDecimal(latitude, true));
-                tgt.SetGpsLongitude(CompactExifLib.GeoCoordinate.FromDecimal(longitude, false)); 
+                tgt.SetGpsLatitude(GeoCoordinate.FromDecimal(latitude, true));
+                tgt.SetGpsLongitude(GeoCoordinate.FromDecimal(longitude, false)); 
 
                 tgt.Save();
                 logger.LogDebug("Added {Latitude} and Longitude {Longitude} to {File}", latitude, longitude, fi.FullName);

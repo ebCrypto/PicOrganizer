@@ -9,8 +9,8 @@ using Microsoft.Extensions.Configuration;
 
 var config = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-               .AddJsonFile("appsettings-debug.json")
-               //.AddJsonFile("appsettings-bernard-all.json")
+               //.AddJsonFile("appsettings-debug.json")
+               .AddJsonFile("appsettings-bernard-all.json")
                //.AddJsonFile("appsettings-emmanuel.json")
                .AddEnvironmentVariables()
                .Build();
@@ -120,7 +120,7 @@ static async void DoWork(IServiceProvider services)
     await copyPictureService.AddMetaAndCopy(target);
     await duplicateService.MoveDuplicates(target, new DirectoryInfo(Path.Combine(target.FullName, appSettings.OutputSettings.DuplicatesFolderName)));
 
-    locationService.ReportMissing(target,LocationWriter.Before);
+    locationService.ReportMissing(target, LocationWriter.Before);
     if (!string.IsNullOrEmpty(appSettings.InputSettings.KnownLocations) && knownLocationsFile.Exists)
         await locationService.WriteLocation(target, LocationWriter.FromFileName);
     await locationService.WriteLocation(target, LocationWriter.FromClosestSameDay);

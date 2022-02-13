@@ -2,6 +2,8 @@
 using PicOrganizer.Models;
 using System.Collections.Concurrent;
 using System.Text;
+using System.Text.RegularExpressions;
+using CompactExifLib;
 
 namespace PicOrganizer.Services
 {
@@ -33,14 +35,16 @@ namespace PicOrganizer.Services
                 ;
             Tags = tags.Distinct();
             logger.LogInformation("Found {Count} unique Tags", Tags.Count());
+            logger.LogDebug("Found {@Tags} unique Tags", Tags);
         }
 
         private List<string> MakeWordList(FileInfo f, DirectoryInfo rootToIgnore)
-        {
-            var path = AlphaCharAndSpacesOnly(f.FullName.Substring(rootToIgnore.FullName.Length, f.FullName.Length - rootToIgnore.FullName.Length - f.Extension.Length));
-            if (path.Contains(" "))
+        {   
+            string words = f.FullName.Substring(rootToIgnore.FullName.Length, f.FullName.Length - rootToIgnore.FullName.Length - f.Extension.Length);
+            var path = AlphaCharAndSpacesOnly(words);
+            if (path != null && path.Any())
             {
-                var items = path.Split(" ").Select(p => p.ToLowerInvariant()).Where(p => !string.IsNullOrWhiteSpace(p) && p.Length > 2 && !appSettings.TagSkipper.Contains(p));
+                var items = path.Select(p => p.ToLowerInvariant()).Where(p => !string.IsNullOrWhiteSpace(p) && p.Length > 3 && !appSettings.TagSkipper.Contains(p) && !Regex.IsMatch(p,@"^[a-f]*$"));
                 return items.ToList();
             }
             return new List<string>();
@@ -72,8 +76,8 @@ namespace PicOrganizer.Services
                     logger.LogTrace("Skiping invalid file {File}", f.FullName);
                     return;
                 }
-                CompactExifLib.ExifData imageFile = new(f.FullName);
-                imageFile.GetTagValue(CompactExifLib.ExifTag.XpKeywords, out string existingTags, CompactExifLib.StrCoding.Utf16Le_Byte);
+                ExifData imageFile = new(f.FullName);
+                imageFile.GetTagValue(ExifTag.XpKeywords, out string existingTags, StrCoding.Utf16Le_Byte);
                 var existingTagArray = !string.IsNullOrEmpty(existingTags) && existingTags.Contains(';') ? existingTags.Split(";").ToList() : new List<string>();
                 var words = MakeWordList(f, rootToIgnore);
                 var relevantTags = Tags.Intersect(words).Union(existingTagArray);
@@ -81,7 +85,7 @@ namespace PicOrganizer.Services
                 string tagString = string.Join(";", relevantTags);
                 if (tagString != existingTags)
                 {
-                    imageFile.SetTagValue(CompactExifLib.ExifTag.XpKeywords, tagString, CompactExifLib.StrCoding.Utf16Le_Byte);
+                    imageFile.SetTagValue(ExifTag.XpKeywords, tagString, StrCoding.Utf16Le_Byte);
                     imageFile.Save();
                     logger.LogDebug("{File} Keywords {Old} -> {New}", f.FullName, existingTags, tagString);
                 }
@@ -93,17 +97,23 @@ namespace PicOrganizer.Services
             }
         }
 
-        private static string AlphaCharAndSpacesOnly(string str)
+        private static IEnumerable<string> AlphaCharAndSpacesOnly(string str)
         {
+            if (string.IsNullOrEmpty(str))
+                return null;
             StringBuilder sb = new();
             foreach (char c in str)
             {
+                if(c >= '0' && c<= '9')
+                    sb.Append(1);
                 if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
                     sb.Append(c);
                 else
                     sb.Append(" ");
             }
-            return sb.ToString();
+            var list = sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var result = list.Where(p => !p.Any(q=>char.IsDigit(q)));
+            return result;
         }
     }
 }
