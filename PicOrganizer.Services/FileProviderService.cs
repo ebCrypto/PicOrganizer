@@ -51,7 +51,7 @@ namespace PicOrganizer.Services
                 var fileInfos = di.GetFiles(appSettings.AllFileExtensions, searchOption);
                 var allFiles = fileInfos.Select(p => p.FullName);
                 var files = includeAlreadyProcessed ? allFiles: allFiles.Except(processedPreviously);
-                logger.Log(files.Any() && !includeAlreadyProcessed ? LogLevel.Information : LogLevel.Debug, "{Directory}: {allCount} Files.{AlreadyProcessed}", di.FullName, allFiles.Count(), includeAlreadyProcessed ? string.Format($" {files.Count()} Files not already processed.") : string.Empty);
+                logger.Log(files.Any() && !includeAlreadyProcessed ? LogLevel.Information : LogLevel.Debug, "{Directory}: {allCount} Files.{AlreadyProcessed}", di.FullName, allFiles.Count(), allFiles.Count() != files.Count() ? string.Format($" {files.Count()} Files not already processed.") : string.Empty);
                 return fileInfos.Where(p=> files.Contains(p.FullName)); 
             }
             if (searchPatterns.Contains('|'))
@@ -67,7 +67,7 @@ namespace PicOrganizer.Services
                 var fileInfos = di.GetFiles(searchPatterns, searchOption);
                 var allFiles = fileInfos.Select(p => p.FullName);
                 var files = includeAlreadyProcessed ? allFiles : allFiles.Except(processedPreviously);
-                logger.Log(files.Any() && !includeAlreadyProcessed ? LogLevel.Information : LogLevel.Debug, "{Directory}: {allCount} Files.{AlreadyProcessed}", di.FullName, allFiles.Count(), includeAlreadyProcessed ? string.Format($" {files.Count()} Files not already processed.") : string.Empty);
+                logger.Log(files.Any() && !includeAlreadyProcessed ? LogLevel.Information : LogLevel.Debug, "{Directory}: {allCount} Files.{AlreadyProcessed}", di.FullName, allFiles.Count(), allFiles.Count() != files.Count() ? string.Format($" {files.Count()} Files not already processed.") : string.Empty);
                 return fileInfos.Where(p => files.Contains(p.FullName));
             }
         }

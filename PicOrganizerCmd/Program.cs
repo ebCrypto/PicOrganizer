@@ -10,8 +10,8 @@ using Microsoft.Extensions.Configuration;
 var config = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                //.AddJsonFile("appsettings-debug.json")
-               .AddJsonFile("appsettings-bernard-all.json")
-               //.AddJsonFile("appsettings-emmanuel.json")
+               //.AddJsonFile("appsettings-bernard-all.json")
+               .AddJsonFile("appsettings-emmanuel.json")
                .AddEnvironmentVariables()
                .Build();
 var appSettings = config.Get<AppSettings>();
@@ -59,7 +59,7 @@ static async void DoWork(IServiceProvider services)
 
     logger.LogInformation("Starting...");
 
-    var target = new DirectoryInfo(appSettings.OutputSettings.TargetDirectories.FirstOrDefault());
+    var target = new DirectoryInfo(appSettings.OutputSettings.TargetDirectories.First());
     logger.LogInformation("Executing in {Mode} Mode", (AppSettings.Mode)appSettings.InputSettings.Mode);
     if (target.Exists && appSettings.InputSettings.Mode == AppSettings.Mode.Full)
     {
@@ -105,7 +105,7 @@ static async void DoWork(IServiceProvider services)
             logger.LogError("KnownLocationsFile file {File} does not exist", knownLocationsFile.FullName);
     }
 
-    if (appSettings.InputSettings.Mode == AppSettings.Mode.DeltasOnly)
+    if (appSettings.InputSettings.Mode == AppSettings.Mode.OnlyAddNew)
     {
         var metaFolder = new DirectoryInfo(Path.Combine(target.FullName, appSettings.OutputSettings.MetaDataFolderName));
         if (!metaFolder.Exists)
@@ -113,7 +113,7 @@ static async void DoWork(IServiceProvider services)
             logger.LogError("Unable to find Meta Data folder {Meta}", metaFolder.FullName);
             Environment.Exit(-1);
         }
-        logger.LogInformation(@"Delta mode... looking for meta data in {Target}...", metaFolder.FullName);
+        logger.LogInformation(@"{Mode} mode... looking for meta data in {Target}...", appSettings.InputSettings.Mode, metaFolder.FullName);
         await runDataService.ReadFromDisk(metaFolder);
     }
 
@@ -130,8 +130,10 @@ static async void DoWork(IServiceProvider services)
 
     tagService.CreateTags(target);
     tagService.AddRelevantTagsToFiles(target);
+    copyPictureService.RenameFileRemovingDiacritics(target);
 
     runDataService.WriteToDisk(target);
+
 
     logger.LogInformation("Done...");
 }

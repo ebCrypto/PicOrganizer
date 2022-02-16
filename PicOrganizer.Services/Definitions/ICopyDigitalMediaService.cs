@@ -6,5 +6,7 @@
         
         [Obsolete]
         void PropagateToOtherTargets();
+
+        void RenameFileRemovingDiacritics(DirectoryInfo di);
     }
 }

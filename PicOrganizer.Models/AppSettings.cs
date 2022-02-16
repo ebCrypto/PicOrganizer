@@ -60,7 +60,7 @@
         public enum Mode
         {
             Full = 0,
-            DeltasOnly = 1
+            OnlyAddNew = 1
         }
     }
 }

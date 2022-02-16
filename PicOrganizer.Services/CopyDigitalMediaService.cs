@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using PicOrganizer.Models;
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace PicOrganizer.Services
@@ -226,6 +228,49 @@ namespace PicOrganizer.Services
                     logger.LogError(ex, "Unable to copy file {Source}", file);
                 }
             });
+        }
+
+        public string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return text;
+
+            text = text.Normalize(NormalizationForm.FormD);
+            var chars = text.Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark).ToArray();
+            return new string(chars).Normalize(NormalizationForm.FormC);
+        }
+
+        public void RenameFileRemovingDiacritics(FileInfo fi)
+        {
+            if (!fi.Exists)
+                return;
+            var removedDiacritics = RemoveDiacritics(fi.Name);
+            if (removedDiacritics == fi.Name)
+            {
+                logger.LogTrace("{File} has no Diacritics to remove", fi.FullName);
+                return;
+            }
+            logger.LogDebug("renaming {File} to {NewFile}", fi.FullName, removedDiacritics);
+            fi.MoveTo(Path.Combine(fi.Directory.FullName, removedDiacritics));
+        }
+
+        public void RenameFileRemovingDiacritics(DirectoryInfo di)
+        {
+            var fileInfos = fileProviderService.GetFilesViaPattern(di, appSettings.PictureAndVideoFilter, SearchOption.AllDirectories, true);
+            int count = 0;
+            Parallel.ForEach(fileInfos, parallelOptions, file =>
+            {
+                try
+                {
+                    RenameFileRemovingDiacritics(file);
+                    count++;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Unable to rename file {Source}", file);
+                }
+            });
+            logger.LogInformation("Removed Diacritics from {Count} files", count);
         }
     }
 }
