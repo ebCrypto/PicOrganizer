@@ -20,7 +20,7 @@ namespace PicOrganizer.Services
 
         public string MakeDirectoryName(DateTime dt)
         {
-            if (dt.Year <= appSettings.InputSettings.StartingYearOfLibrary)
+            if (dt.Year < appSettings.InputSettings.StartingYearOfLibrary)
                 return appSettings.OutputSettings.UnknownDateFolderName;
             return dt.ToString(appSettings.OutputSettings.SubFolderDateFormat);
         }
@@ -50,7 +50,7 @@ namespace PicOrganizer.Services
             if (string.IsNullOrEmpty(input))
                 return string.Empty;
             var extension = Path.GetExtension(input);
-            var output = Regex.Replace(string.IsNullOrEmpty(extension) ? input : input[..^extension.Length], @"\s+", " ");
+            var output = /*RemoveLeadingZeros(*/Regex.Replace(string.IsNullOrEmpty(extension) ? input : input[..^extension.Length], @"\s+", " ")/*)*/;
             if (Guid.TryParse(output, out var resultGuid))
             {
                 output = Math.Abs(output.GetHashCode()).ToString().Substring(1);
@@ -63,6 +63,19 @@ namespace PicOrganizer.Services
                     output = output.Replace(record.Original, record.ReplaceWith);
             }
             return output + extension;
+        }
+        private static string RemoveLeadingZeros(string str)
+        {
+
+            // Regex to remove leading
+            // zeros from a string
+            string regex = "^0+(?!$)";
+
+            // Replaces the matched
+            // value with given string
+            str = Regex.Replace(str, regex, "");
+
+            return str;
         }
 
         public string AddParentDirectoryToFileName(FileInfo fileInfo)

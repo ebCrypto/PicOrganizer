@@ -10,8 +10,8 @@ using Microsoft.Extensions.Configuration;
 var config = new ConfigurationBuilder()
                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                //.AddJsonFile("appsettings-debug.json")
-               //.AddJsonFile("appsettings-bernard-all.json")
-               .AddJsonFile("appsettings-emmanuel.json")
+               .AddJsonFile("appsettings-bernard-all.json")
+               //.AddJsonFile("appsettings-emmanuel.json")
                .AddEnvironmentVariables()
                .Build();
 var appSettings = config.Get<AppSettings>();

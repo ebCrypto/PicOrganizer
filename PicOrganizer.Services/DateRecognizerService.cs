@@ -83,7 +83,7 @@ namespace PicOrganizer.Services
                         var value = (List<Dictionary<string, string>>)resolutionValue.Value;
                         logger.LogTrace("Found {Count} value(s) in this resolution for name {Name}", value.Count, name);
                         DateTime.TryParse(value?[0]?["timex"], out var result);
-                        if (result.Year > appSettings.InputSettings.StartingYearOfLibrary && result < DateTime.Now)
+                        if (result.Year >= appSettings.InputSettings.StartingYearOfLibrary && result < DateTime.Now)
                         {
                             logger.LogDebug("Inferring DateTaken '{Date}' from name {Name}", result.ToString(), name);
                             return result;
