@@ -51,7 +51,7 @@ namespace PicOrganizer.Services
                 return string.Empty;
             var extension = Path.GetExtension(input);
             var output = /*RemoveLeadingZeros(*/Regex.Replace(string.IsNullOrEmpty(extension) ? input : input[..^extension.Length], @"\s+", " ")/*)*/;
-            if (Guid.TryParse(output, out var resultGuid))
+            if (Guid.TryParse(output, out _))
             {
                 output = Math.Abs(output.GetHashCode()).ToString().Substring(1);
                 logger.LogDebug("Found Guid in {File}, renaming {NewName}", input, output);

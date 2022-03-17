@@ -62,16 +62,16 @@ namespace PicOrganizer.Services
             Parallel.ForEach(
                fileProviderService.GetFilesViaPattern(di, appSettings.PictureFilter, SearchOption.AllDirectories, false),
                parallelOptions,
-               async f => await AddRelevantTagsToFile(f, di))
+               f => AddRelevantTagsToFile(f, di))
                ;
             logger.LogInformation("Done tagging pictures in Directory {Directory}", di.FullName);
         }
 
-        public async Task AddRelevantTagsToFile(FileInfo f, DirectoryInfo rootToIgnore)
+        public void AddRelevantTagsToFile(FileInfo f, DirectoryInfo rootToIgnore)
         {
             try
             {
-                if (f.Directory.Name == appSettings.OutputSettings.InvalidJpegFolderName)
+                if (f?.Directory?.Name == appSettings.OutputSettings.InvalidJpegFolderName)
                 {
                     logger.LogTrace("Skiping invalid file {File}", f.FullName);
                     return;
