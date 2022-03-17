@@ -191,7 +191,7 @@ namespace PicOrganizer.Services
         {
             try
             {
-                if (fi == null || fi.Directory.Name == appSettings.OutputSettings.InvalidJpegFolderName || fi.Directory.Name == appSettings.OutputSettings.UnknownDateFolderName)
+                if (fi == null || fi?.Directory?.Name == appSettings.OutputSettings.InvalidJpegFolderName || fi?.Directory?.Name == appSettings.OutputSettings.UnknownDateFolderName)
                     return false;
                 var imageFile = new ExifData (fi.FullName);
                 imageFile.GetDateTaken(out DateTime dt);
