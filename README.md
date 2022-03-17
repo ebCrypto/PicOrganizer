@@ -100,6 +100,7 @@ Execute the entire `DoWork` method or comment out some services, potentially to 
 
 ## Upcoming Features and Improvements
 Pull Requests welcome!
+* [ ] Bring code coverage up
 * [ ] Create a cli using https://github.com/dotnet/command-line-api
 * [ ] Integrate geo-tagging API (Google maps or similar) to extract location from filename instead of using csv list
 * [ ] Dockerize
