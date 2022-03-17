@@ -3,13 +3,13 @@
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=ebCrypto_PicOrganizer&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=ebCrypto_PicOrganizer)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=ebCrypto_PicOrganizer&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=ebCrypto_PicOrganizer)
 
-PicOrganizer is an dotnet core library for organizing, dating, geotagging and keyword tagging a collection of pictures and videos using file names, directory names and information from files taken at about the same time with the purpose of creating a consistent and organized photo library on the file system.
+PicOrganizer is a dotnet core library for organizing, dating, geotagging and keyword tagging a collection of pictures and videos using file names, directory names and information from files taken at about the same time with the purpose of creating a consistent and organized photo library on the file system.
 
 
 ## Typical use case
-You inherit a large collection of pictures taken by camera that was not equipped with a GPS device, or a libray of pictures that was converted from prints or slides. These pictures might be organized in folders with dates and/or locations contained within the directory names or filenames. 
+You inherit a large collection of pictures taken by a camera that was not equipped with a GPS device, or a libray of pictures that was converted from prints or slides. These pictures might be organized in folders with dates and/or locations contained within the directory names or file names. 
 
-PicOrganizer will extract the dates from the file names and will buble up to the directory names until a date is recognized. PicOrganizer will copy these files using a structured hierarchy of folders `yyyy-MM`, and then add the GPS coordinates to the files using either or a combination of 3 methods: From the FileName, a known timeline (ie where was I on this date) or using the location of the closest found picture on that same day.
+PicOrganizer will extract the dates from the file names and will buble up to the directory names until a date is recognized. PicOrganizer will copy these files using a structured hierarchy of folders `yyyy-MM`, and then add the GPS coordinates using a combination of 3 methods: From the FileName, a known timeline (ie where was I on this date) or using the location of the closest found picture on that same day.
 
 ## Features Overview
 * Service Based architecture to facilitate calling all or a subset of the processing routines.
