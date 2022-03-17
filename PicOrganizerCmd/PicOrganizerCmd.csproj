@@ -21,19 +21,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="appSettings-bernard-all.json">
+    <None Update="appSettings-b2.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="appSettings-bernard-papier.json">
+    <None Update="appSettings-b1.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="appSettings-bernard-diapos.json">
+    <None Update="appSettings-b0.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="appSettings-debug.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="appSettings-emmanuel.json">
+    <None Update="appSettings-e.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="appSettings.json">
