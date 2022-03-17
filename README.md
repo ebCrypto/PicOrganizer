@@ -1,4 +1,8 @@
 # PicOrganizer
+[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-white.svg)](https://sonarcloud.io/summary/new_code?id=ebCrypto_PicOrganizer)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=ebCrypto_PicOrganizer&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=ebCrypto_PicOrganizer)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=ebCrypto_PicOrganizer&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=ebCrypto_PicOrganizer)
+
 PicOrganizer is an dotnet core library for organizing, dating, geotagging and keyword tagging a collection of pictures and videos using file names, directory names and information from files taken at about the same time with the purpose of creating a consistent and organized photo library on the file system.
 
 
