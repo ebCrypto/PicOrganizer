@@ -29,7 +29,7 @@ jobs:
       - name: Sonarqube Begin
         run: | 
           dotnet tool install --global dotnet-sonarscanner
-          dotnet sonarscanner begin /k:"ebCrypto_PicOrganizer" /o:"ebcrypto" /d:sonar.login=${{ secrets.SONAR_TOKEN }} /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vstest.reportsPaths="**/*.trx"
+          dotnet sonarscanner begin /k:"ebCrypto_PicOrganizer" /o:"ebcrypto" /d:sonar.login=${{ secrets.SONAR_TOKEN }} /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.vstest.reportsPaths="**/*.trx" /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
 
       - name: Build
         run: dotnet build
