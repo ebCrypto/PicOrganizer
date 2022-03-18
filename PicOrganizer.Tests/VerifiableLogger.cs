@@ -10,6 +10,7 @@ namespace PicOrganizer.Tests
     public class VerifiableLogger<T> : ILogger<T>//Replace T with your type
     {
         public int CalledCount { get; set; }
+        public int ExceptionCalledCount { get; set; }
 
         //boiler plate, required to implement ILogger<T>
         IDisposable ILogger.BeginScope<TState>(TState state) => throw new NotImplementedException();
@@ -17,6 +18,10 @@ namespace PicOrganizer.Tests
 
         //Meaningful method, this get's called when you use .LogInformation()
         void ILogger.Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
-          => this.CalledCount++;
+        {
+            this.CalledCount++;
+            if (exception != null)
+                ExceptionCalledCount++;
+        }
     }
 }

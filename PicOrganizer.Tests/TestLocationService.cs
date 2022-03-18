@@ -33,6 +33,7 @@ public class TestLocationService
         var l = new LocationService(appSettings, verifiableLogger, reportService.Object, fileProviderService.Object, dateRecognizerService.Object);
         var tempFile = new FileInfo(Path.GetTempFileName());
         l.SaveCoordinatesToImage(1.23m, 4.56m, tempFile);
+        Assert.Equal(1,verifiableLogger.ExceptionCalledCount);
     }
     
 }
