@@ -16,7 +16,7 @@ public class TestDateRecognizerService
     {
         var config = new ConfigurationBuilder()
                   //.AddJsonFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\PicOrganizerCmd\appSettings.json"))
-                  .AddJsonFile(Path.Combine("PicOrganizerCmd", "appSettings.json"))
+                  .AddJsonFile(Path.Combine("..", "..", "..", "..", "..", "PicOrganizerCmd", "appSettings.json"))
                   .Build();
         appSettings = config.Get<AppSettings>();
 
