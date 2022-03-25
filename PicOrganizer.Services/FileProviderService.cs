@@ -42,13 +42,14 @@ namespace PicOrganizer.Services
             return fileInfos;
         }
 
+        // TODO Replace GetFilesViaPattern with new[] { "*.gif", "*.jpg" }.SelectMany(ext => dir.GetFiles(ext));
         public IEnumerable<FileInfo> GetFilesViaPattern(DirectoryInfo di, string searchPatterns, SearchOption searchOption, bool includeAlreadyProcessed)
         {
-            //TODO should store GetFilesViaPattern in a cache
+            //TODO should store result of GetFilesViaPattern in a cache
             logger.LogTrace("Looking for FileInfos in {Source}, using the SearchPattern {SearchPattern} and SearchOption {SearchOption}", di.FullName, searchPatterns, searchOption);
             if (string.IsNullOrEmpty(searchPatterns))
             {
-                var fileInfos = di.GetFiles(appSettings.AllFileExtensions, searchOption);
+                var fileInfos = di.GetFiles(appSettings.AllFileExtensions, new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive , RecurseSubdirectories = searchOption == SearchOption.AllDirectories });
                 var allFiles = fileInfos.Select(p => p.FullName);
                 var files = includeAlreadyProcessed ? allFiles: allFiles.Except(processedPreviously);
                 logger.Log(files.Any() && !includeAlreadyProcessed ? LogLevel.Information : LogLevel.Debug, "{Directory}: {allCount} Files.{AlreadyProcessed}", di.FullName, allFiles.Count(), allFiles.Count() != files.Count() ? string.Format($" {files.Count()} Files not already processed.") : string.Empty);
@@ -64,7 +65,7 @@ namespace PicOrganizer.Services
             }
             else
             {
-                var fileInfos = di.GetFiles(searchPatterns, searchOption);
+                var fileInfos = di.GetFiles(searchPatterns, new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive, RecurseSubdirectories = searchOption == SearchOption.AllDirectories });
                 var allFiles = fileInfos.Select(p => p.FullName);
                 var files = includeAlreadyProcessed ? allFiles : allFiles.Except(processedPreviously);
                 logger.Log(files.Any() && !includeAlreadyProcessed ? LogLevel.Information : LogLevel.Debug, "{Directory}: {allCount} Files.{AlreadyProcessed}", di.FullName, allFiles.Count(), allFiles.Count() != files.Count() ? string.Format($" {files.Count()} Files not already processed.") : string.Empty);

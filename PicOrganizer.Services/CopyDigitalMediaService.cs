@@ -98,28 +98,26 @@ namespace PicOrganizer.Services
                 try
                 {
                     imageFile = GetImageFileWithRetries(fileInfo, appSettings.InputSettings.RetryAttempts);
-                    imageFile.GetDateTaken( out dateTimeOriginal);
-                    string cleanFolderName = fileNameService.CleanName(fileInfo.Directory?.Name);
-                    if (!dateRecognizerService.Valid(dateTimeOriginal) || cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned))
-                        dateInferred = dateRecognizerService.InferDateFromName(fileInfo.Name);
-                    if ((!dateRecognizerService.Valid(dateTimeOriginal) || cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned)) && !dateRecognizerService.Valid(dateInferred))
-                        dateInferred = dateRecognizerService.InferDateFromName(fileNameService.CleanName(fileInfo.Name));
-                    if ((!dateRecognizerService.Valid(dateTimeOriginal) || cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned)) && !dateRecognizerService.Valid(dateInferred))
-                        dateInferred = dateRecognizerService.InferDateFromName(cleanFolderName);
+                    if (imageFile == null)
+                    {
+                        destination = appSettings.OutputSettings.InvalidJpegFolderName;
+                    }
+                    else
+                    {
+                        imageFile.GetDateTaken(out dateTimeOriginal);
+                        string cleanFolderName = fileNameService.CleanName(fileInfo.Directory?.Name);
+                        if (!dateRecognizerService.Valid(dateTimeOriginal) || cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned))
+                            dateInferred = dateRecognizerService.InferDateFromName(fileInfo.Name);
+                        if ((!dateRecognizerService.Valid(dateTimeOriginal) || cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned)) && !dateRecognizerService.Valid(dateInferred))
+                            dateInferred = dateRecognizerService.InferDateFromName(fileNameService.CleanName(fileInfo.Name));
+                        if ((!dateRecognizerService.Valid(dateTimeOriginal) || cleanFolderName.ToLowerInvariant().Contains(appSettings.InputSettings.Scanned)) && !dateRecognizerService.Valid(dateInferred))
+                            dateInferred = dateRecognizerService.InferDateFromName(cleanFolderName);
 
-                    DateTime folderDate = !dateRecognizerService.Valid(dateInferred) ? dateTimeOriginal : dateInferred;
-                    destination = folderDate != DateTime.MinValue ? Path.Combine(appSettings.OutputSettings.PicturesFolderName, fileNameService.MakeDirectoryName(folderDate)) : appSettings.OutputSettings.UnknownDateFolderName;
+                        DateTime folderDate = !dateRecognizerService.Valid(dateInferred) ? dateTimeOriginal : dateInferred;
+                        destination = folderDate != DateTime.MinValue ? Path.Combine(appSettings.OutputSettings.PicturesFolderName, fileNameService.MakeDirectoryName(folderDate)) : appSettings.OutputSettings.UnknownDateFolderName;
+                    }
                 }
-                //catch (NotValidJPEGFileException)
-                //{
-                //    destination = appSettings.OutputSettings.InvalidJpegFolderName;
-                //}
-                //catch (NotValidImageFileException)
-                //{
-                //    logger.LogDebug("NotValidImageFileException encoutered, will not process DateTaken for {File} ", fileInfo.Name);
-                //    destination = appSettings.OutputSettings.InvalidJpegFolderName;
-                //}
-                catch (IOException e)
+                catch (Exception e)
                 {
                     logger.LogWarning(e, "Unable to get file {File}", fileInfo.Name);
                 }
@@ -151,8 +149,14 @@ namespace PicOrganizer.Services
                     if (retryAttemptLeft > 0)
                         return GetImageFileWithRetries(fileInfo, retryAttemptLeft - 1);
                 }
-                throw e;
+                else
+                    logger.LogWarning("Unable to load file {FileInfo}. {Message}", fileInfo.FullName, e.Message);
             }
+            catch (IndexOutOfRangeException e)
+            {
+                logger.LogWarning("Unable to load file {FileInfo}. It might be corrupted. {Message}", fileInfo.FullName, e.Message);
+            }
+            return null;
         }
 
         private void AddMetaAndCopy(FileInfo fileInfo, DirectoryInfo targetDirectory, DateTime dateInferred)
@@ -216,7 +220,7 @@ namespace PicOrganizer.Services
                 }
             });
 
-            var files = Directory.GetFiles(SourcePath, appSettings.AllFileExtensions, SearchOption.AllDirectories);
+            var files = Directory.GetFiles(SourcePath, appSettings.AllFileExtensions, new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive, RecurseSubdirectories = true });
             Parallel.ForEach(files, parallelOptions, file =>
             {
                 try
